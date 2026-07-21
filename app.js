@@ -7,12 +7,12 @@ const SUPABASE_URL = 'https://nhuiqqjdjmjqrdwsxfia.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5odWlxcWpkam1qcXJkd3N4ZmlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ2NDgzNjgsImV4cCI6MjEwMDIyNDM2OH0.9gj4Zcc1QUeS3q7n0BKWslVR-c0Wr3ZqbQMJ3K0kHnY';
 
 // Create Supabase client safely — CDN might not have loaded yet
-let supabase = null;
+let supabaseClient = null;
 let supabaseReady = false;
 
 try {
   if (typeof window.supabase !== 'undefined' && window.supabase.createClient) {
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       auth: { persistSession: true, autoRefreshToken: true }
     });
     supabaseReady = true;
@@ -129,14 +129,14 @@ function getUsernameFromEmail(email) {
 }
 
 function checkSupabaseReady() {
-  if (!supabaseReady || !supabase) {
+  if (!supabaseReady || !supabaseClient) {
     throw new Error('Supabase is not connected. Please check your internet connection and refresh the page.');
   }
 }
 
 async function signUp(username, password) {
   checkSupabaseReady();
-  const { data, error } = await supabase.auth.signUp({
+  const { data, error } = await supabaseClient.auth.signUp({
     email: `${username}@notenest.app`,
     password,
     options: { data: { username } }
@@ -147,7 +147,7 @@ async function signUp(username, password) {
 
 async function signIn(username, password) {
   checkSupabaseReady();
-  const { data, error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabaseClient.auth.signInWithPassword({
     email: `${username}@notenest.app`,
     password
   });
@@ -157,7 +157,7 @@ async function signIn(username, password) {
 
 async function signOut() {
   checkSupabaseReady();
-  const { error } = await supabase.auth.signOut();
+  const { error } = await supabaseClient.auth.signOut();
   if (error) throw error;
 }
 
@@ -209,7 +209,7 @@ async function createNote() {
     modifiedAt: now(),
   };
 
-  const { error } = await supabase.from('notes').insert({
+  const { error } = await supabaseClient.from('notes').insert({
     id:          note.id,
     user_id:     state.user.id,
     title:       note.title,
@@ -233,7 +233,7 @@ async function createNote() {
 
 async function deleteNote(id) {
   if (!state.user) return;
-  const { error } = await supabase.from('notes').delete().eq('id', id);
+  const { error } = await supabaseClient.from('notes').delete().eq('id', id);
 
   if (error) {
     console.error('Failed to delete note:', error);
@@ -261,7 +261,7 @@ async function updateNote(id, fields) {
   if ('pinned' in fields) supabaseFields.pinned = fields.pinned;
   supabaseFields.modified_at = now();
 
-  const { error } = await supabase.from('notes').update(supabaseFields).eq('id', id);
+  const { error } = await supabaseClient.from('notes').update(supabaseFields).eq('id', id);
 
   if (error) {
     console.error('Failed to update note:', error);
@@ -1129,7 +1129,7 @@ async function init() {
     // Bind events (they'll work once logged in)
     bindEvents();
 
-    if (!supabaseReady || !supabase) {
+    if (!supabaseReady || !supabaseClient) {
       clearTimeout(safetyTimer);
       state.loading = false;
       toast('Could not connect to server. Please check your connection and refresh.', 'error', 5000);
@@ -1138,7 +1138,7 @@ async function init() {
     }
 
     // Check existing session
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await supabaseClient.auth.getSession();
     clearTimeout(safetyTimer);
 
     if (session) {
@@ -1154,7 +1154,7 @@ async function init() {
     }
 
     // Listen for auth state changes
-    supabase.auth.onAuthStateChange(async (event, session) => {
+    supabaseClient.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
         state.user = session.user;
         state.session = session;
@@ -1196,4 +1196,8 @@ function killLoadingScreen() {
   }
 }
 
-document.addEventListener('DOMContentLoaded', init);
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
