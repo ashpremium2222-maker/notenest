@@ -15,15 +15,12 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-
-  <!-- ===== LOADING SCREEN ===== -->
   <div class="loading-screen" id="loading-screen">
     <img src="logo.jpg" alt="NoteNest" class="loading-logo" />
     <div class="loading-spinner"></div>
     <p class="loading-text">Loading NoteNest…</p>
   </div>
 
-  <!-- ===== AUTH PAGE ===== -->
   <div class="auth-page" id="auth-page" hidden>
     <div class="auth-card">
       <div class="auth-header">
@@ -31,61 +28,38 @@
         <h1 class="auth-title">NoteNest</h1>
         <p class="auth-subtitle">Capture. Organize. Remember.</p>
       </div>
-
-      <!-- Login Form -->
       <form class="auth-form" id="login-form" autocomplete="off">
         <div class="auth-field">
           <label class="auth-label" for="login-username">Username</label>
-          <svg class="auth-field-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           <input type="text" id="login-username" class="auth-input" placeholder="Enter your username" required autocomplete="off" />
         </div>
         <div class="auth-field">
           <label class="auth-label" for="login-password">Password</label>
-          <svg class="auth-field-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
           <input type="password" id="login-password" class="auth-input" placeholder="Enter your password" required autocomplete="off" />
         </div>
-        <button type="submit" class="auth-btn" id="login-btn">
-          <span class="auth-btn-text">Sign In</span>
-          <span class="auth-btn-loader" hidden>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>
-          </span>
-        </button>
+        <button type="submit" class="auth-btn" id="login-btn">Sign In</button>
         <p class="auth-error" id="login-error" hidden></p>
       </form>
-
-      <!-- Signup Form -->
       <form class="auth-form" id="signup-form" hidden autocomplete="off">
         <div class="auth-field">
           <label class="auth-label" for="signup-username">Username</label>
-          <svg class="auth-field-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           <input type="text" id="signup-username" class="auth-input" placeholder="Choose a username" required minlength="3" autocomplete="off" />
         </div>
         <div class="auth-field">
           <label class="auth-label" for="signup-password">Password</label>
-          <svg class="auth-field-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
           <input type="password" id="signup-password" class="auth-input" placeholder="Choose a password (6+ chars)" required minlength="6" autocomplete="off" />
         </div>
-        <button type="submit" class="auth-btn" id="signup-btn">
-          <span class="auth-btn-text">Create Account</span>
-          <span class="auth-btn-loader" hidden>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>
-          </span>
-        </button>
+        <button type="submit" class="auth-btn" id="signup-btn">Create Account</button>
         <p class="auth-error" id="signup-error" hidden></p>
       </form>
-
       <div class="auth-toggle">
         <p class="auth-toggle-text" id="auth-toggle-text">Don't have an account? <a href="#" id="auth-toggle-link" class="auth-toggle-link">Sign up</a></p>
       </div>
     </div>
   </div>
 
-  <!-- ===== APP SHELL ===== -->
   <div class="app-shell" id="app-shell" hidden>
-
-    <!-- ===== SIDEBAR ===== -->
     <aside class="sidebar" id="sidebar">
-      <!-- Brand -->
       <div class="brand">
         <img src="logo.jpg" alt="NoteNest logo" class="brand-logo" />
         <div class="brand-text">
@@ -93,36 +67,19 @@
           <span class="brand-tagline">Capture. Organize. Remember.</span>
         </div>
       </div>
-
-      <!-- Search -->
       <div class="sidebar-search">
         <div class="search-wrapper">
-          <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-          </svg>
-          <input type="search" id="search-input" class="search-input" placeholder="Search notes…" autocomplete="off" aria-label="Search notes" />
+          <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="search" id="search-input" class="search-input" placeholder="Search notes…" autocomplete="off" />
         </div>
       </div>
-
-      <!-- New Note -->
-      <button class="btn-new-note" id="btn-new-note">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
-        New Note
-      </button>
-
-      <!-- Tags -->
+      <button class="btn-new-note" id="btn-new-note"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg> New Note</button>
       <div class="sidebar-section">
         <p class="sidebar-section-title">Tags</p>
         <div class="tag-filter-list" id="tag-filter-list">
-          <button class="tag-filter-item active" data-tag="all">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
-            All Notes
-            <span class="tag-count" id="count-all">0</span>
-          </button>
+          <button class="tag-filter-item active" data-tag="all"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg> All Notes <span class="tag-count" id="count-all">0</span></button>
         </div>
       </div>
-
-      <!-- Sort -->
       <div class="sidebar-section">
         <p class="sidebar-section-title">Sort By</p>
         <div class="sort-options">
@@ -131,115 +88,53 @@
           <button class="sort-btn" data-sort="title">Title</button>
         </div>
       </div>
-
-      <!-- Bottom: stats + profile -->
       <div class="sidebar-bottom">
         <div class="sidebar-stats">
-          <div class="stat-item">
-            <span class="stat-num" id="stat-notes">0</span>
-            <span class="stat-label">Notes</span>
-          </div>
+          <div class="stat-item"><span class="stat-num" id="stat-notes">0</span><span class="stat-label">Notes</span></div>
           <div class="stat-divider"></div>
-          <div class="stat-item">
-            <span class="stat-num" id="stat-tags">0</span>
-            <span class="stat-label">Tags</span>
-          </div>
+          <div class="stat-item"><span class="stat-num" id="stat-tags">0</span><span class="stat-label">Tags</span></div>
           <div class="stat-divider"></div>
-          <div class="stat-item">
-            <span class="stat-num" id="stat-words">0</span>
-            <span class="stat-label">Words</span>
-          </div>
+          <div class="stat-item"><span class="stat-num" id="stat-words">0</span><span class="stat-label">Words</span></div>
         </div>
-        <!-- User + Dark Mode -->
         <div class="sidebar-user-row">
-          <div class="sidebar-user" id="sidebar-user">
-            <div class="sidebar-avatar" id="sidebar-avatar">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            </div>
-            <span class="sidebar-username" id="sidebar-username">user</span>
-          </div>
-          <button class="icon-btn logout-btn" id="btn-logout" title="Sign out" aria-label="Sign out">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-          </button>
+          <div class="sidebar-user"><div class="sidebar-avatar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><span class="sidebar-username" id="sidebar-username">user</span></div>
+          <button class="icon-btn logout-btn" id="btn-logout" title="Sign out"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
         </div>
-        <button class="theme-toggle" id="theme-toggle" title="Toggle dark mode" aria-label="Toggle dark mode">
-          <span class="theme-icon light-icon">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
-              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-              <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
-              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-            </svg>
-          </span>
-          <span class="theme-icon dark-icon">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-            </svg>
-          </span>
+        <button class="theme-toggle" id="theme-toggle" title="Toggle dark mode">
+          <span class="theme-icon light-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></span>
+          <span class="theme-icon dark-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span>
           <span class="theme-label" id="theme-label">Dark Mode</span>
         </button>
       </div>
     </aside>
-
-    <!-- ===== NOTES LIST ===== -->
     <main class="notes-panel" id="notes-panel">
       <div class="panel-header">
         <h1 class="panel-title" id="panel-title">All Notes</h1>
         <div class="panel-actions">
-          <button class="icon-btn" id="btn-toggle-view" title="Toggle view" aria-label="Toggle view">
-            <svg id="view-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-              <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
-            </svg>
-          </button>
-          <button class="icon-btn" id="btn-sidebar-toggle" title="Toggle sidebar" aria-label="Toggle sidebar">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/>
-            </svg>
-          </button>
+          <button class="icon-btn" id="btn-toggle-view" title="Toggle view"><svg id="view-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
+          <button class="icon-btn" id="btn-sidebar-toggle" title="Toggle sidebar"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg></button>
         </div>
       </div>
-
       <div class="notes-container grid-view" id="notes-container">
-        <!-- Empty state -->
         <div class="empty-state" id="empty-state">
-          <div class="empty-icon">
-            <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
-              <rect x="8" y="6" width="40" height="44" rx="5" fill="currentColor" opacity="0.08"/>
-              <rect x="8" y="6" width="40" height="44" rx="5" stroke="currentColor" stroke-width="2" opacity="0.3"/>
-              <path d="M18 20h20M18 28h20M18 36h12" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
-            </svg>
-          </div>
+          <div class="empty-icon"><svg width="56" height="56" viewBox="0 0 56 56" fill="none"><rect x="8" y="6" width="40" height="44" rx="5" fill="currentColor" opacity="0.08"/><rect x="8" y="6" width="40" height="44" rx="5" stroke="currentColor" stroke-width="2" opacity="0.3"/><path d="M18 20h20M18 28h20M18 36h12" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.4"/></svg></div>
           <p class="empty-title">No notes yet</p>
           <p class="empty-sub">Click <strong>New Note</strong> to get started</p>
           <button class="btn-empty-cta" id="btn-empty-cta">+ New Note</button>
         </div>
       </div>
     </main>
-
-    <!-- ===== EDITOR ===== -->
     <section class="editor-panel" id="editor-panel">
-
-      <!-- Welcome screen -->
       <div class="editor-welcome" id="editor-welcome">
         <img src="logo.jpg" alt="NoteNest" class="welcome-logo" />
         <h2 class="welcome-title">NoteNest</h2>
         <p class="welcome-sub">Select a note or create a new one to start writing.</p>
-        <div class="welcome-hints">
-          <span><kbd>Ctrl+N</kbd> New note</span>
-          <span><kbd>Ctrl+K</kbd> Search</span>
-          <span><kbd>Ctrl+S</kbd> Save</span>
-        </div>
+        <div class="welcome-hints"><span><kbd>Ctrl+N</kbd> New note</span><span><kbd>Ctrl+K</kbd> Search</span><span><kbd>Ctrl+S</kbd> Save</span></div>
       </div>
-
-      <!-- Editor area -->
       <div class="editor-content" id="editor-content-area" hidden>
-        <!-- Toolbar -->
         <div class="editor-toolbar">
           <div class="toolbar-left">
-            <button class="icon-btn" id="btn-close-editor" title="Close">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
-            </button>
+            <button class="icon-btn" id="btn-close-editor" title="Close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
             <div class="toolbar-sep"></div>
             <button class="toolbar-btn" id="fmt-bold" title="Bold"><b>B</b></button>
             <button class="toolbar-btn" id="fmt-italic" title="Italic"><i>I</i></button>
@@ -248,73 +143,40 @@
             <button class="toolbar-btn" id="fmt-h1" title="Heading 1">H1</button>
             <button class="toolbar-btn" id="fmt-h2" title="Heading 2">H2</button>
             <div class="toolbar-sep"></div>
-            <button class="toolbar-btn" id="fmt-ul" title="Bullet list">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1" fill="currentColor"/><circle cx="3" cy="12" r="1" fill="currentColor"/><circle cx="3" cy="18" r="1" fill="currentColor"/></svg>
-            </button>
-            <button class="toolbar-btn" id="fmt-ol" title="Numbered list">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><path d="M4 6h1v4M4 10h2M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/></svg>
-            </button>
+            <button class="toolbar-btn" id="fmt-ul" title="Bullet list"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1" fill="currentColor"/><circle cx="3" cy="12" r="1" fill="currentColor"/><circle cx="3" cy="18" r="1" fill="currentColor"/></svg></button>
+            <button class="toolbar-btn" id="fmt-ol" title="Numbered list"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><path d="M4 6h1v4M4 10h2M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/></svg></button>
           </div>
           <div class="toolbar-right">
             <span class="word-count" id="word-count">0 words</span>
-            <button class="toolbar-btn pin-btn" id="btn-pin" title="Pin note">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m12 17-1-9 9 1-2 3 3 3-3 3-3-3-3 2z"/><path d="m8 21 4-4"/></svg>
-            </button>
-            <button class="toolbar-btn delete-btn" id="btn-delete" title="Delete note">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
-            </button>
+            <button class="toolbar-btn pin-btn" id="btn-pin" title="Pin note"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 17-1-9 9 1-2 3 3 3-3 3-3-3-3 2z"/><path d="m8 21 4-4"/></svg></button>
+            <button class="toolbar-btn delete-btn" id="btn-delete" title="Delete note"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg></button>
           </div>
         </div>
-
-        <!-- Title -->
         <input type="text" class="note-title-input" id="note-title-input" placeholder="Note title…" maxlength="120" />
-
-        <!-- Tags -->
         <div class="tags-row" id="tags-input-wrapper">
           <div class="tags-display" id="tags-display"></div>
           <input type="text" class="tags-input" id="tags-input" placeholder="Add tags…" autocomplete="off" />
         </div>
-
-        <!-- Color picker -->
         <div class="color-row" id="note-color-picker">
           <button class="color-dot active" data-color="default" title="Blue"></button>
-          <button class="color-dot" data-color="rose"    title="Rose"></button>
-          <button class="color-dot" data-color="amber"   title="Amber"></button>
+          <button class="color-dot" data-color="rose" title="Rose"></button>
+          <button class="color-dot" data-color="amber" title="Amber"></button>
           <button class="color-dot" data-color="emerald" title="Emerald"></button>
-          <button class="color-dot" data-color="sky"     title="Sky"></button>
-          <button class="color-dot" data-color="violet"  title="Violet"></button>
+          <button class="color-dot" data-color="sky" title="Sky"></button>
+          <button class="color-dot" data-color="violet" title="Violet"></button>
         </div>
-
-        <!-- Rich text editor -->
-        <div
-          class="rich-editor"
-          id="rich-editor"
-          contenteditable="true"
-          data-placeholder="Start writing…"
-          spellcheck="true"
-        ></div>
-
-        <!-- Footer -->
+        <div class="rich-editor" id="rich-editor" contenteditable="true" data-placeholder="Start writing…" spellcheck="true"></div>
         <div class="editor-footer">
           <span class="editor-meta" id="editor-meta">Just now</span>
-          <span class="auto-save" id="auto-save-indicator">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
-            Saved
-          </span>
+          <span class="auto-save" id="auto-save-indicator"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Saved</span>
         </div>
       </div>
     </section>
   </div>
-
-  <!-- Toast -->
   <div class="toast-container" id="toast-container" aria-live="polite"></div>
-
-  <!-- Delete modal -->
   <div class="modal-overlay" id="delete-modal" hidden>
     <div class="modal">
-      <div class="modal-icon">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
-      </div>
+      <div class="modal-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg></div>
       <h2 class="modal-title">Delete Note?</h2>
       <p class="modal-body">This note will be permanently deleted.</p>
       <div class="modal-actions">
@@ -323,7 +185,6 @@
       </div>
     </div>
   </div>
-
-  <script src="app.js?v=2"></script>
+  <script src="app.js?v=3"></script>
 </body>
 </html>

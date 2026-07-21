@@ -250,7 +250,6 @@ async function updateNote(id, fields) {
   const note = state.notes.find(n => n.id === id);
   if (!note) return;
 
-  const updated = { ...note, ...fields, modifiedAt: now() };
   Object.assign(note, fields, { modifiedAt: now() });
 
   // Map to Supabase column names
@@ -1009,11 +1008,111 @@ function showUI() {
   renderList();
 }
 
+// ============================================================
+// SELF-CONTAINED DOM — creates auth/loading elements if HTML is old
+// ============================================================
+
+// Ensure CSS keyframe for spinner animation exists
+(function injectSpinnerKeyframe() {
+  if (!document.getElementById('nb-spinner-keyframe')) {
+    const s = document.createElement('style');
+    s.id = 'nb-spinner-keyframe';
+    s.textContent = '@keyframes nb-spin{to{transform:rotate(360deg)}}';
+    document.head.appendChild(s);
+  }
+}());
+
+function ensureCriticalElements() {
+  // Loading screen
+  if (!dom.loadingScreen) {
+    const el = document.createElement('div');
+    el.id = 'loading-screen';
+    el.className = 'loading-screen';
+    el.style.cssText = 'display:flex;align-items:center;justify-content:center;flex-direction:column;position:fixed;inset:0;background:#f0f4ff;z-index:9999;font-family:Inter,sans-serif';
+    el.innerHTML = '<img src="logo.jpg" alt="NoteNest" style="width:56px;height:56px;border-radius:14px;margin-bottom:20px"/><div style="width:32px;height:32px;border:3px solid #e0e7ff;border-top-color:#4a8af4;border-radius:50%;animation:nb-spin .8s linear infinite"></div><p style="color:#6b7280;margin-top:16px;font-size:14px">Loading NoteNest&hellip;</p>';
+    document.body.prepend(el);
+    dom.loadingScreen = el;
+  }
+
+  // Auth page
+  if (!dom.authPage) {
+    const el = document.createElement('div');
+    el.id = 'auth-page';
+    el.className = 'auth-page';
+    el.style.cssText = 'display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f0f4ff;padding:20px;font-family:Inter,sans-serif';
+    el.innerHTML = [
+      '<div class="auth-card" style="background:#fff;border-radius:16px;box-shadow:0 4px 24px rgba(74,138,244,0.12);padding:40px 36px;width:100%;max-width:380px;text-align:center">',
+      '  <div class="auth-header">',
+      '    <img src="logo.jpg" alt="NoteNest" style="width:48px;height:48px;border-radius:12px;margin-bottom:12px"/>',
+      '    <h1 style="font-size:24px;font-weight:700;color:#111827;margin:0 0 4px;font-family:Outfit,sans-serif">NoteNest</h1>',
+      '    <p style="color:#6b7280;font-size:14px;margin:0 0 28px">Capture. Organize. Remember.</p>',
+      '  </div>',
+      '  <form class="auth-form" id="login-form" style="text-align:left">',
+      '    <div style="margin-bottom:16px">',
+      '      <label style="display:block;font-size:13px;font-weight:500;color:#374151;margin-bottom:6px" for="login-username">Username</label>',
+      '      <input type="text" id="login-username" placeholder="Enter your username" style="width:100%;padding:10px 14px;border:1px solid #e5eaf5;border-radius:8px;font-size:14px;background:#f8faff;outline:none;box-sizing:border-box" required/>',
+      '    </div>',
+      '    <div style="margin-bottom:20px">',
+      '      <label style="display:block;font-size:13px;font-weight:500;color:#374151;margin-bottom:6px" for="login-password">Password</label>',
+      '      <input type="password" id="login-password" placeholder="Enter your password" style="width:100%;padding:10px 14px;border:1px solid #e5eaf5;border-radius:8px;font-size:14px;background:#f8faff;outline:none;box-sizing:border-box" required/>',
+      '    </div>',
+      '    <button type="submit" id="login-btn" style="width:100%;padding:11px;background:#4a8af4;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Sign In</button>',
+      '    <p class="auth-error" id="login-error" hidden style="color:#ef4444;font-size:13px;margin-top:12px"></p>',
+      '  </form>',
+      '  <form class="auth-form" id="signup-form" hidden style="text-align:left">',
+      '    <div style="margin-bottom:16px">',
+      '      <label style="display:block;font-size:13px;font-weight:500;color:#374151;margin-bottom:6px" for="signup-username">Username</label>',
+      '      <input type="text" id="signup-username" placeholder="Choose a username" style="width:100%;padding:10px 14px;border:1px solid #e5eaf5;border-radius:8px;font-size:14px;background:#f8faff;outline:none;box-sizing:border-box" required minlength="3"/>',
+      '    </div>',
+      '    <div style="margin-bottom:20px">',
+      '      <label style="display:block;font-size:13px;font-weight:500;color:#374151;margin-bottom:6px" for="signup-password">Password</label>',
+      '      <input type="password" id="signup-password" placeholder="Choose a password (6+ chars)" style="width:100%;padding:10px 14px;border:1px solid #e5eaf5;border-radius:8px;font-size:14px;background:#f8faff;outline:none;box-sizing:border-box" required minlength="6"/>',
+      '    </div>',
+      '    <button type="submit" id="signup-btn" style="width:100%;padding:11px;background:#4a8af4;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Create Account</button>',
+      '    <p class="auth-error" id="signup-error" hidden style="color:#ef4444;font-size:13px;margin-top:12px"></p>',
+      '  </form>',
+      '  <div class="auth-toggle" style="margin-top:20px">',
+      '    <p class="auth-toggle-text" id="auth-toggle-text" style="font-size:13px;color:#6b7280">Don\'t have an account? <a href="#" id="auth-toggle-link" class="auth-toggle-link" style="color:#4a8af4;text-decoration:none;font-weight:500">Sign up</a></p>',
+      '  </div>',
+      '</div>'
+    ].join('\n');
+    document.body.prepend(el);
+    dom.authPage = el;
+  }
+
+  // Toast container
+  if (!dom.toastContainer) {
+    const el = document.createElement('div');
+    el.id = 'toast-container';
+    el.className = 'toast-container';
+    el.setAttribute('aria-live', 'polite');
+    document.body.appendChild(el);
+    dom.toastContainer = el;
+  }
+
+  // Refresh DOM refs for auth elements that were created
+  dom.loginForm = dom.loginForm || $('login-form');
+  dom.signupForm = dom.signupForm || $('signup-form');
+  dom.loginUsername = dom.loginUsername || $('login-username');
+  dom.loginPassword = dom.loginPassword || $('login-password');
+  dom.loginBtn = dom.loginBtn || $('login-btn');
+  dom.loginError = dom.loginError || $('login-error');
+  dom.signupUsername = dom.signupUsername || $('signup-username');
+  dom.signupPassword = dom.signupPassword || $('signup-password');
+  dom.signupBtn = dom.signupBtn || $('signup-btn');
+  dom.signupError = dom.signupError || $('signup-error');
+  dom.authToggleLink = dom.authToggleLink || $('auth-toggle-link');
+  dom.authToggleText = dom.authToggleText || $('auth-toggle-text');
+}
+
 // Emergency timeout: if loading takes >10s, show auth page
 const LOADING_TIMEOUT_MS = 10000;
 
 async function init() {
   try {
+    // Ensure all critical DOM elements exist (creates them if HTML is old)
+    ensureCriticalElements();
+
     showLoading();
 
     // Emergency timeout that fires if init gets stuck
