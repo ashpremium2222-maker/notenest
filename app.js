@@ -1,9 +1,18 @@
 'use strict';
 
 // ============================================================
-// STORAGE KEYS
+// SUPABASE CONFIG
 // ============================================================
-const STORAGE_KEY  = 'notenest_v2';
+const SUPABASE_URL = 'https://nhuiqqjdjmjqrdwsxfia.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5odWlxcWpkam1qcXJkd3N4ZmlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ2NDgzNjgsImV4cCI6MjEwMDIyNDM2OH0.9gj4Zcc1QUeS3q7n0BKWslVR-c0Wr3ZqbQMJ3K0kHnY';
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true }
+});
+
+// ============================================================
+// STORAGE KEYS (settings only — notes go to Supabase)
+// ============================================================
 const SETTINGS_KEY = 'notenest_settings_v2';
 
 // ============================================================
@@ -18,6 +27,9 @@ let state = {
   viewMode:     'grid',
   sidebarOpen:  true,
   theme:        'light',
+  user:         null,
+  session:      null,
+  loading:      true,
 };
 
 // ============================================================
@@ -62,7 +74,7 @@ function getTagHue(tag) {
 function esc(str) {
   return String(str)
     .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    .replace(/>/g,'&gt;').replace(/\"/g,'&quot;');
 }
 
 function highlight(text, q) {
@@ -73,38 +85,99 @@ function highlight(text, q) {
 }
 
 // ============================================================
-// PERSISTENCE
+// SETTINGS PERSISTENCE (localStorage — UI preferences only)
 // ============================================================
 
-function save() {
+function saveSettings() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.notes));
     localStorage.setItem(SETTINGS_KEY, JSON.stringify({
       viewMode:    state.viewMode,
       sortBy:      state.sortBy,
       sidebarOpen: state.sidebarOpen,
       theme:       state.theme,
     }));
-  } catch (e) { /* quota exceeded or private mode */ }
+  } catch (e) { /* ignore */ }
 }
 
-function load() {
+function loadSettings() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) state.notes = JSON.parse(raw);
     const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
-    state.viewMode   = s.viewMode   || 'grid';
-    state.sortBy     = s.sortBy     || 'modified';
-    state.sidebarOpen = s.sidebarOpen !== false;
-    state.theme      = s.theme      || 'light';
+    state.viewMode    = s.viewMode    || 'grid';
+    state.sortBy      = s.sortBy      || 'modified';
+    state.sidebarOpen  = s.sidebarOpen !== false;
+    state.theme       = s.theme       || 'light';
   } catch (e) { /* ignore */ }
 }
 
 // ============================================================
-// NOTE CRUD
+// AUTH FUNCTIONS
 // ============================================================
 
-function createNote() {
+function getUsernameFromEmail(email) {
+  return email.replace('@notenest.app', '');
+}
+
+async function signUp(username, password) {
+  const { data, error } = await supabase.auth.signUp({
+    email: `${username}@notenest.app`,
+    password,
+    options: { data: { username } }
+  });
+  if (error) throw error;
+  return data;
+}
+
+async function signIn(username, password) {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: `${username}@notenest.app`,
+    password
+  });
+  if (error) throw error;
+  return data;
+}
+
+async function signOut() {
+  const { error } = await supabase.auth.signOut();
+  if (error) throw error;
+}
+
+function getUserDisplayName() {
+  const meta = state.user?.user_metadata;
+  return meta?.username || getUsernameFromEmail(state.user?.email || '') || 'user';
+}
+
+// ============================================================
+// SUPABASE NOTES CRUD
+// ============================================================
+
+async function loadNotes() {
+  if (!state.user) return;
+  const { data, error } = await supabase
+    .from('notes')
+    .select('*')
+    .order('modified_at', { ascending: false });
+
+  if (error) {
+    console.error('Failed to load notes:', error);
+    toast('Failed to load notes', 'error');
+    return;
+  }
+
+  // Map Supabase fields to our app format
+  state.notes = (data || []).map(n => ({
+    id:         n.id,
+    title:      n.title || '',
+    content:    n.content || '',
+    tags:       n.tags || [],
+    color:      n.color || 'default',
+    pinned:     n.pinned || false,
+    createdAt:  n.created_at,
+    modifiedAt: n.modified_at,
+  }));
+}
+
+async function createNote() {
+  if (!state.user) return null;
   const note = {
     id:         genId(),
     title:      '',
@@ -115,22 +188,66 @@ function createNote() {
     createdAt:  now(),
     modifiedAt: now(),
   };
+
+  const { error } = await supabase.from('notes').insert({
+    id:          note.id,
+    user_id:     state.user.id,
+    title:       note.title,
+    content:     note.content,
+    tags:        note.tags,
+    color:       note.color,
+    pinned:      note.pinned,
+    created_at:  note.createdAt,
+    modified_at: note.modifiedAt,
+  });
+
+  if (error) {
+    console.error('Failed to create note:', error);
+    toast('Failed to create note', 'error');
+    return null;
+  }
+
   state.notes.unshift(note);
-  save();
   return note;
 }
 
-function deleteNote(id) {
+async function deleteNote(id) {
+  if (!state.user) return;
+  const { error } = await supabase.from('notes').delete().eq('id', id);
+
+  if (error) {
+    console.error('Failed to delete note:', error);
+    toast('Failed to delete note', 'error');
+    return;
+  }
+
   state.notes = state.notes.filter(n => n.id !== id);
   if (state.activeNoteId === id) state.activeNoteId = null;
-  save();
 }
 
-function updateNote(id, fields) {
+async function updateNote(id, fields) {
+  if (!state.user) return;
   const note = state.notes.find(n => n.id === id);
   if (!note) return;
+
+  const updated = { ...note, ...fields, modifiedAt: now() };
   Object.assign(note, fields, { modifiedAt: now() });
-  save();
+
+  // Map to Supabase column names
+  const supabaseFields = {};
+  if ('title' in fields) supabaseFields.title = fields.title;
+  if ('content' in fields) supabaseFields.content = fields.content;
+  if ('tags' in fields) supabaseFields.tags = fields.tags;
+  if ('color' in fields) supabaseFields.color = fields.color;
+  if ('pinned' in fields) supabaseFields.pinned = fields.pinned;
+  supabaseFields.modified_at = now();
+
+  const { error } = await supabase.from('notes').update(supabaseFields).eq('id', id);
+
+  if (error) {
+    console.error('Failed to update note:', error);
+    toast('Failed to save changes', 'error');
+  }
 }
 
 function getActive() {
@@ -173,42 +290,118 @@ function totalWords() {
 
 const $ = id => document.getElementById(id);
 const dom = {
-  appShell:     document.querySelector('.app-shell'),
-  htmlEl:       document.documentElement,
-  searchInput:  $('search-input'),
-  btnNewNote:   $('btn-new-note'),
-  btnEmptyCta:  $('btn-empty-cta'),
-  tagFilterList: $('tag-filter-list'),
-  sortBtns:     document.querySelectorAll('.sort-btn'),
-  statNotes:    $('stat-notes'),
-  statTags:     $('stat-tags'),
-  statWords:    $('stat-words'),
-  notesContainer: $('notes-container'),
-  emptyState:   $('empty-state'),
-  panelTitle:   $('panel-title'),
-  btnToggleView:  $('btn-toggle-view'),
-  viewIcon:       $('view-icon'),
+  appShell:         document.querySelector('.app-shell'),
+  htmlEl:           document.documentElement,
+  loadingScreen:    $('loading-screen'),
+  authPage:         $('auth-page'),
+  loginForm:        $('login-form'),
+  signupForm:       $('signup-form'),
+  loginUsername:    $('login-username'),
+  loginPassword:    $('login-password'),
+  loginBtn:         $('login-btn'),
+  loginError:       $('login-error'),
+  signupUsername:   $('signup-username'),
+  signupPassword:   $('signup-password'),
+  signupBtn:        $('signup-btn'),
+  signupError:      $('signup-error'),
+  authToggleLink:   $('auth-toggle-link'),
+  authToggleText:   $('auth-toggle-text'),
+  sidebarUser:      $('sidebar-user'),
+  sidebarUsername:  $('sidebar-username'),
+  btnLogout:        $('btn-logout'),
+  searchInput:      $('search-input'),
+  btnNewNote:       $('btn-new-note'),
+  btnEmptyCta:      $('btn-empty-cta'),
+  tagFilterList:    $('tag-filter-list'),
+  sortBtns:         document.querySelectorAll('.sort-btn'),
+  statNotes:        $('stat-notes'),
+  statTags:         $('stat-tags'),
+  statWords:        $('stat-words'),
+  notesContainer:   $('notes-container'),
+  emptyState:       $('empty-state'),
+  panelTitle:       $('panel-title'),
+  btnToggleView:    $('btn-toggle-view'),
+  viewIcon:         $('view-icon'),
   btnSidebarToggle: $('btn-sidebar-toggle'),
-  themeToggle:    $('theme-toggle'),
-  themeLabel:     $('theme-label'),
-  editorWelcome:  $('editor-welcome'),
-  editorContent:  $('editor-content-area'),
-  noteTitleInput: $('note-title-input'),
-  tagsDisplay:    $('tags-display'),
-  tagsInput:      $('tags-input'),
-  colorPicker:    $('note-color-picker'),
-  richEditor:     $('rich-editor'),
-  wordCount:      $('word-count'),
-  editorMeta:     $('editor-meta'),
-  autoSave:       $('auto-save-indicator'),
-  btnPin:         $('btn-pin'),
-  btnDelete:      $('btn-delete'),
-  btnCloseEditor: $('btn-close-editor'),
-  toastContainer: $('toast-container'),
-  deleteModal:    $('delete-modal'),
-  btnCancel:      $('btn-modal-cancel'),
-  btnConfirm:     $('btn-modal-confirm'),
+  themeToggle:      $('theme-toggle'),
+  themeLabel:       $('theme-label'),
+  editorWelcome:    $('editor-welcome'),
+  editorContent:    $('editor-content-area'),
+  noteTitleInput:   $('note-title-input'),
+  tagsDisplay:      $('tags-display'),
+  tagsInput:        $('tags-input'),
+  colorPicker:      $('note-color-picker'),
+  richEditor:       $('rich-editor'),
+  wordCount:        $('word-count'),
+  editorMeta:       $('editor-meta'),
+  autoSave:         $('auto-save-indicator'),
+  btnPin:           $('btn-pin'),
+  btnDelete:        $('btn-delete'),
+  btnCloseEditor:   $('btn-close-editor'),
+  toastContainer:   $('toast-container'),
+  deleteModal:      $('delete-modal'),
+  btnCancel:        $('btn-modal-cancel'),
+  btnConfirm:       $('btn-modal-confirm'),
 };
+
+// ============================================================
+// AUTH UI
+// ============================================================
+
+function showAuthScreen() {
+  dom.authPage.removeAttribute('hidden');
+  dom.appShell.setAttribute('hidden', '');
+  dom.loadingScreen.setAttribute('hidden', '');
+  resetAuthForms();
+}
+
+function showAppScreen() {
+  dom.authPage.setAttribute('hidden', '');
+  dom.appShell.removeAttribute('hidden');
+  dom.loadingScreen.setAttribute('hidden', '');
+  // Update sidebar username
+  dom.sidebarUsername.textContent = getUserDisplayName();
+}
+
+function showLoading() {
+  dom.loadingScreen.removeAttribute('hidden');
+  dom.authPage.setAttribute('hidden', '');
+  dom.appShell.setAttribute('hidden', '');
+}
+
+function resetAuthForms() {
+  dom.loginUsername.value = '';
+  dom.loginPassword.value = '';
+  dom.signupUsername.value = '';
+  dom.signupPassword.value = '';
+  dom.loginError.setAttribute('hidden', '');
+  dom.signupError.setAttribute('hidden', '');
+  showLoginForm();
+}
+
+function showLoginForm() {
+  dom.loginForm.removeAttribute('hidden');
+  dom.signupForm.setAttribute('hidden', '');
+  dom.authToggleText.innerHTML = `Don't have an account? <a href="#" id="auth-toggle-link" class="auth-toggle-link">Sign up</a>`;
+  dom.authToggleLink = document.getElementById('auth-toggle-link');
+  dom.authToggleLink?.addEventListener('click', e => { e.preventDefault(); showSignupForm(); });
+}
+
+function showSignupForm() {
+  dom.loginForm.setAttribute('hidden', '');
+  dom.signupForm.removeAttribute('hidden');
+  dom.authToggleText.innerHTML = `Already have an account? <a href="#" id="auth-toggle-link" class="auth-toggle-link">Sign in</a>`;
+  dom.authToggleLink = document.getElementById('auth-toggle-link');
+  dom.authToggleLink?.addEventListener('click', e => { e.preventDefault(); showLoginForm(); });
+}
+
+function setBtnLoading(btn, loading) {
+  const text = btn.querySelector('.auth-btn-text');
+  const loader = btn.querySelector('.auth-btn-loader');
+  btn.disabled = loading;
+  if (text) text.hidden = loading;
+  if (loader) loader.hidden = !loading;
+}
 
 // ============================================================
 // THEME
@@ -222,7 +415,7 @@ function applyTheme(t) {
 
 function toggleTheme() {
   applyTheme(state.theme === 'light' ? 'dark' : 'light');
-  save();
+  saveSettings();
 }
 
 // ============================================================
@@ -541,9 +734,77 @@ function closeDeleteModal() {
 // ============================================================
 
 function bindEvents() {
+  // -- AUTH EVENTS --
+
+  // Login form submit
+  dom.loginForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    const username = dom.loginUsername.value.trim();
+    const password = dom.loginPassword.value;
+    if (!username || !password) return;
+
+    setBtnLoading(dom.loginBtn, true);
+    dom.loginError.setAttribute('hidden', '');
+
+    try {
+      await signIn(username, password);
+      // Auth listener will handle the rest
+    } catch (err) {
+      dom.loginError.textContent = err.message || 'Invalid username or password.';
+      dom.loginError.removeAttribute('hidden');
+      setBtnLoading(dom.loginBtn, false);
+    }
+  });
+
+  // Signup form submit
+  dom.signupForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    const username = dom.signupUsername.value.trim();
+    const password = dom.signupPassword.value;
+    if (!username || !password) return;
+
+    setBtnLoading(dom.signupBtn, true);
+    dom.signupError.setAttribute('hidden', '');
+
+    try {
+      await signUp(username, password);
+      // Auth listener will handle the rest
+      toast('Account created! Welcome to NoteNest 🎉', 'success');
+    } catch (err) {
+      dom.signupError.textContent = err.message || 'Could not create account.';
+      dom.signupError.removeAttribute('hidden');
+      setBtnLoading(dom.signupBtn, false);
+    }
+  });
+
+  // Logout
+  dom.btnLogout.addEventListener('click', async () => {
+    try {
+      await signOut();
+      toast('Signed out', 'info');
+    } catch (err) {
+      toast('Failed to sign out', 'error');
+    }
+  });
+
+  // Enter key on login/signup inputs
+  ['login-username', 'login-password', 'signup-username', 'signup-password'].forEach(id => {
+    const el = $(id);
+    if (el) el.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const form = el.closest('form');
+        if (form) form.dispatchEvent(new Event('submit'));
+      }
+    });
+  });
+
+  // -- APP EVENTS --
+
   // New note
-  [dom.btnNewNote, dom.btnEmptyCta].forEach(b => b?.addEventListener('click', () => {
-    const note = createNote();
+  [dom.btnNewNote, dom.btnEmptyCta].forEach(b => b?.addEventListener('click', async () => {
+    const note = await createNote();
+    if (!note) return;
     renderSidebar();
     renderList();
     openNote(note.id);
@@ -570,7 +831,7 @@ function bindEvents() {
     state.sortBy = b.getAttribute('data-sort');
     dom.sortBtns.forEach(x => x.classList.toggle('active', x === b));
     renderList();
-    save();
+    saveSettings();
   }));
 
   // View toggle
@@ -578,14 +839,14 @@ function bindEvents() {
     state.viewMode = state.viewMode === 'grid' ? 'list' : 'grid';
     applyViewMode();
     renderList();
-    save();
+    saveSettings();
   });
 
   // Sidebar toggle
   dom.btnSidebarToggle.addEventListener('click', () => {
     state.sidebarOpen = !state.sidebarOpen;
     dom.appShell.classList.toggle('sidebar-hidden', !state.sidebarOpen);
-    save();
+    saveSettings();
   });
 
   // Theme toggle
@@ -642,9 +903,9 @@ function bindEvents() {
   // Delete
   dom.btnDelete.addEventListener('click', () => { if (state.activeNoteId) openDeleteModal(state.activeNoteId); });
   dom.btnCancel.addEventListener('click', closeDeleteModal);
-  dom.btnConfirm.addEventListener('click', () => {
+  dom.btnConfirm.addEventListener('click', async () => {
     if (pendingDelete) {
-      deleteNote(pendingDelete);
+      await deleteNote(pendingDelete);
       closeDeleteModal();
       closeEditor();
       renderSidebar();
@@ -670,9 +931,11 @@ function bindEvents() {
 
     if (ctrl && e.key === 'n' && !e.shiftKey) {
       e.preventDefault();
-      const note = createNote();
-      renderSidebar(); renderList(); openNote(note.id);
-      dom.noteTitleInput.focus();
+      createNote().then(note => {
+        if (!note) return;
+        renderSidebar(); renderList(); openNote(note.id);
+        dom.noteTitleInput.focus();
+      });
     }
 
     if (ctrl && e.key === 'k') {
@@ -711,9 +974,7 @@ function bindEvents() {
 // INIT
 // ============================================================
 
-function init() {
-  load();
-
+function showUI() {
   // Apply theme
   applyTheme(state.theme);
 
@@ -726,7 +987,55 @@ function init() {
   applyViewMode();
   renderSidebar();
   renderList();
+}
+
+async function init() {
+  showLoading();
+
+  // Load settings from localStorage
+  loadSettings();
+
+  // Bind events (they'll work once logged in)
   bindEvents();
+
+  // Check existing session
+  const { data: { session } } = await supabase.auth.getSession();
+
+  if (session) {
+    state.user = session.user;
+    state.session = session;
+    // Load notes from Supabase
+    await loadNotes();
+    showAppScreen();
+    showUI();
+  } else {
+    showAuthScreen();
+  }
+
+  state.loading = false;
+
+  // Listen for auth state changes
+  supabase.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session) {
+      state.user = session.user;
+      state.session = session;
+      await loadNotes();
+      showAppScreen();
+      showUI();
+    } else if (event === 'SIGNED_OUT') {
+      state.user = null;
+      state.session = null;
+      state.notes = [];
+      state.activeNoteId = null;
+      closeEditor();
+      showAuthScreen();
+    } else if (event === 'TOKEN_REFRESHED') {
+      state.session = session;
+    }
+  });
+
+  // If signup requires email confirmation, show a hint
+  // Most projects disable email confirmation for password auth
 }
 
 document.addEventListener('DOMContentLoaded', init);
