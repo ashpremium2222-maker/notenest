@@ -222,6 +222,43 @@ kbd{background:var(--bg-input);border:1.5px solid var(--border);border-radius:5p
 mark{background:rgba(74,138,244,0.18);color:var(--blue);border-radius:2px;padding:0 1px}
 ::selection{background:rgba(74,138,244,0.25)}
 :focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:4px}
+
+@media (max-width: 768px) {
+  .app-shell { display: flex; flex-direction: column; position: relative; overflow: hidden; }
+  .sidebar {
+    position: absolute; top: 0; left: 0; bottom: 0;
+    width: 280px; max-width: 85vw;
+    z-index: 100;
+    transform: translateX(-100%);
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    box-shadow: var(--shadow-lg);
+  }
+  .app-shell.mobile-sidebar-open .sidebar { transform: translateX(0); }
+  
+  .sidebar-overlay {
+    display: none; position: absolute; inset: 0;
+    background: rgba(0,0,0,0.4); z-index: 90;
+    backdrop-filter: blur(2px);
+    transition: opacity var(--transition);
+  }
+  .app-shell.mobile-sidebar-open .sidebar-overlay { display: block; animation: overlayIn 0.2s ease; }
+  
+  .notes-panel { flex: 1; width: 100%; min-width: 100%; }
+  
+  .editor-panel {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 80;
+    transform: translateX(100%);
+    background: var(--bg-editor);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .app-shell.mobile-editor-open .editor-panel { transform: translateX(0); }
+  
+  .auth-card { padding: 30px 24px; }
+  .panel-actions .icon-btn:last-child { display: none; } /* Hide toggle view on mobile if needed, or keep it. Let's keep it. */
+  .editor-welcome { display: none !important; }
+}
 </style>
 </head>
 <body>
@@ -270,6 +307,7 @@ mark{background:rgba(74,138,244,0.18);color:var(--blue);border-radius:2px;paddin
 </div>
 
 <div class="app-shell" id="app-shell" hidden>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
   <aside class="sidebar" id="sidebar">
     <div class="brand">
       <img src="logo.jpg" alt="NoteNest logo" class="brand-logo" />

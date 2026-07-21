@@ -331,6 +331,7 @@ const dom = {
   authToggleText:   $('auth-toggle-text'),
   sidebarUser:      $('sidebar-user'),
   sidebarUsername:  $('sidebar-username'),
+  sidebarOverlay:   $('sidebar-overlay'),
   btnLogout:        $('btn-logout'),
   searchInput:      $('search-input'),
   btnNewNote:       $('btn-new-note'),
@@ -538,6 +539,7 @@ function renderSidebar() {
       refreshTagActive();
       renderList();
       updatePanelTitle();
+      if (window.innerWidth <= 768) dom.appShell.classList.remove('mobile-sidebar-open');
     });
     list.appendChild(btn);
   });
@@ -575,6 +577,7 @@ function openNote(id) {
 
   dom.editorWelcome.style.display = 'none';
   dom.editorContent.removeAttribute('hidden');
+  dom.appShell.classList.add('mobile-editor-open');
 
   dom.noteTitleInput.value = note.title;
   renderEditorTags(note.tags);
@@ -597,6 +600,7 @@ function closeEditor() {
   state.activeNoteId = null;
   dom.editorWelcome.style.display = '';
   dom.editorContent.setAttribute('hidden', '');
+  dom.appShell.classList.remove('mobile-editor-open');
   dom.notesContainer.querySelectorAll('.note-card').forEach(c => c.classList.remove('selected'));
 }
 
@@ -826,6 +830,7 @@ function bindEvents() {
 
   // New note
   [dom.btnNewNote, dom.btnEmptyCta].forEach(b => b?.addEventListener('click', async () => {
+    if (window.innerWidth <= 768) dom.appShell.classList.remove('mobile-sidebar-open');
     const note = await createNote();
     if (!note) return;
     renderSidebar();
@@ -867,10 +872,20 @@ function bindEvents() {
 
   // Sidebar toggle
   dom.btnSidebarToggle.addEventListener('click', () => {
-    state.sidebarOpen = !state.sidebarOpen;
-    dom.appShell.classList.toggle('sidebar-hidden', !state.sidebarOpen);
-    saveSettings();
+    if (window.innerWidth <= 768) {
+      dom.appShell.classList.add('mobile-sidebar-open');
+    } else {
+      state.sidebarOpen = !state.sidebarOpen;
+      dom.appShell.classList.toggle('sidebar-hidden', !state.sidebarOpen);
+      saveSettings();
+    }
   });
+
+  if (dom.sidebarOverlay) {
+    dom.sidebarOverlay.addEventListener('click', () => {
+      dom.appShell.classList.remove('mobile-sidebar-open');
+    });
+  }
 
   // Theme toggle
   dom.themeToggle.addEventListener('click', toggleTheme);
