@@ -170,7 +170,9 @@ kbd{background:var(--bg-input);border:1.5px solid var(--border);border-radius:5p
 .color-dot[data-color="violet"]{background:#8b5cf6}
 .color-dot:hover{transform:scale(1.25)}
 .color-dot.active{border-color:var(--text-primary);transform:scale(1.2);box-shadow:0 0 0 2px var(--bg-editor),0 0 0 3px currentColor}
-.rich-editor{flex:1;padding:16px 28px 24px;outline:none;color:var(--text-primary);font-family:Inter,sans-serif;font-size:15px;line-height:1.75;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent;word-break:break-word;transition:color var(--transition)}
+.rich-editor-wrapper{margin:0 20px 16px;border:1.5px solid var(--border);border-radius:var(--radius-md);background:var(--bg-input);box-shadow:var(--shadow-sm);display:flex;flex-direction:column;flex:1;overflow:hidden;min-height:0;transition:all var(--transition)}
+.rich-editor-wrapper:focus-within{border-color:var(--border-focus);box-shadow:0 0 0 3px var(--blue-light)}
+.rich-editor{flex:1;padding:16px 18px 12px;outline:none;color:var(--text-primary);font-family:Inter,sans-serif;font-size:15px;line-height:1.75;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent;word-break:break-word;transition:color var(--transition);background:none}
 .rich-editor::-webkit-scrollbar{width:4px}
 .rich-editor::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
 .rich-editor:empty::before{content:attr(data-placeholder);color:var(--text-muted);pointer-events:none}
@@ -181,7 +183,7 @@ kbd{background:var(--bg-input);border:1.5px solid var(--border);border-radius:5p
 .rich-editor li{margin:3px 0}
 .rich-editor blockquote{border-left:3px solid var(--blue);padding:8px 14px;margin:10px 0;background:var(--blue-light);border-radius:0 var(--radius-sm) var(--radius-sm) 0;color:var(--text-secondary);font-style:italic}
 .rich-editor code{background:var(--bg-input);border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-family:monospace;font-size:13px;color:var(--blue)}
-.editor-footer{display:flex;align-items:center;justify-content:space-between;padding:9px 28px;border-top:1px solid var(--border);flex-shrink:0;background:var(--bg-toolbar);transition:background var(--transition),border-color var(--transition)}
+.editor-footer{display:flex;align-items:center;justify-content:space-between;padding:8px 16px;border-top:1px solid var(--border);flex-shrink:0;background:none;transition:border-color var(--transition)}
 .editor-meta{font-size:11px;color:var(--text-muted)}
 .auto-save{display:flex;align-items:center;gap:4px;font-size:11px;color:#10b981;transition:opacity .3s ease,color .2s ease}
 .auto-save.saving{color:var(--blue);opacity:.7}
@@ -471,10 +473,12 @@ mark{background:rgba(74,138,244,0.18);color:var(--blue);border-radius:2px;paddin
           <button class="color-dot" data-color="violet" title="Violet"></button>
         </div>
       </div>
-      <div class="rich-editor" id="rich-editor" contenteditable="true" data-placeholder="Start writing…" spellcheck="true"></div>
-      <div class="editor-footer">
-        <span class="editor-meta" id="editor-meta">Just now</span>
-        <span class="auto-save" id="auto-save-indicator"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Saved</span>
+      <div class="rich-editor-wrapper">
+        <div class="rich-editor" id="rich-editor" contenteditable="true" data-placeholder="Start writing…" spellcheck="true"></div>
+        <div class="editor-footer">
+          <span class="editor-meta" id="editor-meta">Just now</span>
+          <span class="auto-save" id="auto-save-indicator"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Saved</span>
+        </div>
       </div>
     </div>
   </section>
