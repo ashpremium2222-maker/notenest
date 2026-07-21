@@ -6,9 +6,20 @@
 const SUPABASE_URL = 'https://nhuiqqjdjmjqrdwsxfia.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5odWlxcWpkam1qcXJkd3N4ZmlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ2NDgzNjgsImV4cCI6MjEwMDIyNDM2OH0.9gj4Zcc1QUeS3q7n0BKWslVR-c0Wr3ZqbQMJ3K0kHnY';
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: { persistSession: true, autoRefreshToken: true }
-});
+// Create Supabase client safely — CDN might not have loaded yet
+let supabase = null;
+let supabaseReady = false;
+
+try {
+  if (typeof window.supabase !== 'undefined' && window.supabase.createClient) {
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true }
+    });
+    supabaseReady = true;
+  }
+} catch (e) {
+  console.warn('Supabase client failed to initialize:', e);
+}
 
 // ============================================================
 // STORAGE KEYS (settings only — notes go to Supabase)
@@ -117,7 +128,14 @@ function getUsernameFromEmail(email) {
   return email.replace('@notenest.app', '');
 }
 
+function checkSupabaseReady() {
+  if (!supabaseReady || !supabase) {
+    throw new Error('Supabase is not connected. Please check your internet connection and refresh the page.');
+  }
+}
+
 async function signUp(username, password) {
+  checkSupabaseReady();
   const { data, error } = await supabase.auth.signUp({
     email: `${username}@notenest.app`,
     password,
@@ -128,6 +146,7 @@ async function signUp(username, password) {
 }
 
 async function signIn(username, password) {
+  checkSupabaseReady();
   const { data, error } = await supabase.auth.signInWithPassword({
     email: `${username}@notenest.app`,
     password
@@ -137,6 +156,7 @@ async function signIn(username, password) {
 }
 
 async function signOut() {
+  checkSupabaseReady();
   const { error } = await supabase.auth.signOut();
   if (error) throw error;
 }
@@ -998,44 +1018,71 @@ async function init() {
   // Bind events (they'll work once logged in)
   bindEvents();
 
-  // Check existing session
-  const { data: { session } } = await supabase.auth.getSession();
+  // Safety timeout: show auth screen if loading takes too long
+  const loadingTimeout = setTimeout(() => {
+    if (state.loading) {
+      console.warn('Loading timeout — showing auth screen');
+      state.loading = false;
+      if (!supabaseReady) {
+        toast('Could not connect to server. Please check your connection.', 'error', 5000);
+      }
+      showAuthScreen();
+    }
+  }, 8000);
 
-  if (session) {
-    state.user = session.user;
-    state.session = session;
-    // Load notes from Supabase
-    await loadNotes();
-    showAppScreen();
-    showUI();
-  } else {
-    showAuthScreen();
-  }
+  try {
+    if (!supabaseReady || !supabase) {
+      clearTimeout(loadingTimeout);
+      state.loading = false;
+      toast('Failed to initialize. Try refreshing the page.', 'error', 5000);
+      showAuthScreen();
+      return;
+    }
 
-  state.loading = false;
+    // Check existing session
+    const { data: { session } } = await supabase.auth.getSession();
 
-  // Listen for auth state changes
-  supabase.auth.onAuthStateChange(async (event, session) => {
-    if (event === 'SIGNED_IN' && session) {
+    if (session) {
       state.user = session.user;
       state.session = session;
+      // Load notes from Supabase
       await loadNotes();
+      clearTimeout(loadingTimeout);
       showAppScreen();
       showUI();
-    } else if (event === 'SIGNED_OUT') {
-      state.user = null;
-      state.session = null;
-      state.notes = [];
-      state.activeNoteId = null;
-      closeEditor();
+    } else {
+      clearTimeout(loadingTimeout);
       showAuthScreen();
-    } else if (event === 'TOKEN_REFRESHED') {
-      state.session = session;
     }
-  });
 
-  // If signup requires email confirmation, show a hint
-  // Most projects disable email confirmation for password auth
+    state.loading = false;
+
+    // Listen for auth state changes
+    supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        state.user = session.user;
+        state.session = session;
+        await loadNotes();
+        showAppScreen();
+        showUI();
+      } else if (event === 'SIGNED_OUT') {
+        state.user = null;
+        state.session = null;
+        state.notes = [];
+        state.activeNoteId = null;
+        closeEditor();
+        showAuthScreen();
+      } else if (event === 'TOKEN_REFRESHED') {
+        state.session = session;
+      }
+    });
+  } catch (err) {
+    clearTimeout(loadingTimeout);
+    state.loading = false;
+    console.error('Init error:', err);
+    toast('Something went wrong loading the app.', 'error', 5000);
+    showAuthScreen();
+  }
 }
 
 document.addEventListener('DOMContentLoaded', init);
