@@ -1217,6 +1217,11 @@ async function init() {
         state.session = session;
       }
     });
+
+    // Register Service Worker for PWA / APK support
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW reg error:', err));
+    }
   } catch (err) {
     state.loading = false;
     console.error('Init error:', err);
