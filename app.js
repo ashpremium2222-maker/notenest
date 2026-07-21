@@ -888,15 +888,17 @@ function bindEvents() {
   });
 
   // Sidebar toggle
-  dom.btnSidebarToggle.addEventListener('click', () => {
-    if (window.innerWidth <= 768) {
-      dom.appShell.classList.add('mobile-sidebar-open');
-    } else {
-      state.sidebarOpen = !state.sidebarOpen;
-      dom.appShell.classList.toggle('sidebar-hidden', !state.sidebarOpen);
-      saveSettings();
-    }
-  });
+  if (dom.btnSidebarToggle) {
+    dom.btnSidebarToggle.addEventListener('click', () => {
+      if (window.innerWidth <= 768) {
+        dom.appShell.classList.add('mobile-sidebar-open');
+      } else {
+        state.sidebarOpen = !state.sidebarOpen;
+        dom.appShell.classList.toggle('sidebar-hidden', !state.sidebarOpen);
+        saveSettings();
+      }
+    });
+  }
 
   if (dom.sidebarOverlay) {
     dom.sidebarOverlay.addEventListener('click', () => {
