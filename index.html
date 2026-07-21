@@ -223,42 +223,87 @@ mark{background:rgba(74,138,244,0.18);color:var(--blue);border-radius:2px;paddin
 ::selection{background:rgba(74,138,244,0.25)}
 :focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:4px}
 .sidebar-overlay{display:none}
+.btn-hamburger{display:none}
 
+/* =============================================
+   RESPONSIVE WEB DESIGN — MOBILE (max 768px)
+   ============================================= */
 @media (max-width: 768px) {
-  .app-shell { display: flex; flex-direction: column; position: relative; overflow: hidden; }
+  /* Auth card smaller padding on mobile */
+  .auth-card { padding: 28px 20px; }
+
+  /* Stack the app shell as a single full-screen block */
+  .app-shell {
+    display: block !important;
+    position: relative;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* SIDEBAR: fixed off-screen to the LEFT */
   .sidebar {
-    position: absolute; top: 0; left: 0; bottom: 0;
-    width: 280px; max-width: 85vw;
-    z-index: 100;
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: 80vw; max-width: 300px;
+    z-index: 500;
     transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
     opacity: 1 !important;
     pointer-events: auto !important;
     box-shadow: var(--shadow-lg);
   }
-  .app-shell.mobile-sidebar-open .sidebar { transform: translateX(0); }
-  
+  /* When sidebar is open, slide it in */
+  .app-shell.mobile-sidebar-open .sidebar {
+    transform: translateX(0);
+  }
+
+  /* Sidebar overlay — darkened backdrop */
   .sidebar-overlay {
-    display: none; position: absolute; inset: 0;
-    background: rgba(0,0,0,0.4); z-index: 90;
-    backdrop-filter: blur(2px);
-    transition: opacity var(--transition);
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 490;
+    backdrop-filter: blur(3px);
+    animation: overlayIn 0.2s ease;
   }
-  .app-shell.mobile-sidebar-open .sidebar-overlay { display: block; animation: overlayIn 0.2s ease; }
-  
-  .notes-panel { flex: 1; width: 100%; min-width: 100%; }
-  
+  .app-shell.mobile-sidebar-open .sidebar-overlay { display: block; }
+
+  /* NOTES PANEL: full width, full height */
+  .notes-panel {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    width: 100%;
+    height: 100vh;
+    z-index: 1;
+  }
+
+  /* EDITOR PANEL: fixed off-screen to the RIGHT */
   .editor-panel {
-    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-    z-index: 80;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    width: 100%;
+    height: 100vh;
+    z-index: 200;
     transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
     background: var(--bg-editor);
-    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  .app-shell.mobile-editor-open .editor-panel { transform: translateX(0); }
-  
-  .auth-card { padding: 30px 24px; }
-  .panel-actions .icon-btn:last-child { display: none; } /* Hide toggle view on mobile if needed, or keep it. Let's keep it. */
+  /* When a note is opened, slide editor in */
+  .app-shell.mobile-editor-open .editor-panel {
+    transform: translateX(0);
+  }
+
+  /* Hide sidebar toggle (desktop hamburger); show mobile hamburger */
+  #btn-sidebar-toggle { display: none; }
+  .btn-hamburger { display: flex; }
+
+  /* Hide welcome screen on mobile (no space) */
   .editor-welcome { display: none !important; }
+
+  /* Slightly bigger touch targets */
+  .icon-btn { width: 36px; height: 36px; }
+  .toolbar-btn { min-width: 32px; height: 32px; }
 }
 </style>
 </head>
@@ -359,7 +404,13 @@ mark{background:rgba(74,138,244,0.18);color:var(--blue);border-radius:2px;paddin
   </aside>
   <main class="notes-panel" id="notes-panel">
     <div class="panel-header">
-      <h1 class="panel-title" id="panel-title">All Notes</h1>
+      <div style="display:flex;align-items:center;gap:8px">
+        <!-- Hamburger: only visible on mobile -->
+        <button class="icon-btn btn-hamburger" id="btn-hamburger" title="Open menu" aria-label="Open sidebar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <h1 class="panel-title" id="panel-title">All Notes</h1>
+      </div>
       <div class="panel-actions">
         <button class="icon-btn" id="btn-toggle-view" title="Toggle view"><svg id="view-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
         <button class="icon-btn" id="btn-sidebar-toggle" title="Toggle sidebar"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg></button>

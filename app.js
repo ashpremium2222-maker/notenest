@@ -347,6 +347,7 @@ const dom = {
   btnToggleView:    $('btn-toggle-view'),
   viewIcon:         $('view-icon'),
   btnSidebarToggle: $('btn-sidebar-toggle'),
+  btnHamburger:     $('btn-hamburger'),
   themeToggle:      $('theme-toggle'),
   themeLabel:       $('theme-label'),
   editorWelcome:    $('editor-welcome'),
@@ -884,6 +885,13 @@ function bindEvents() {
   if (dom.sidebarOverlay) {
     dom.sidebarOverlay.addEventListener('click', () => {
       dom.appShell.classList.remove('mobile-sidebar-open');
+    });
+  }
+
+  // Mobile hamburger — opens sidebar
+  if (dom.btnHamburger) {
+    dom.btnHamburger.addEventListener('click', () => {
+      dom.appShell.classList.add('mobile-sidebar-open');
     });
   }
 
