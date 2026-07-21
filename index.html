@@ -229,11 +229,18 @@ mark{background:rgba(74,138,244,0.18);color:var(--blue);border-radius:2px;paddin
 :focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:4px}
 .sidebar-overlay{display:none}
 .btn-hamburger{display:none}
+.mobile-sort-bar{display:none}
 
 /* =============================================
    RESPONSIVE WEB DESIGN — MOBILE (max 768px)
    ============================================= */
 @media (max-width: 768px) {
+  .mobile-sort-bar{display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--border);background:var(--bg-panel);flex-shrink:0}
+  .mobile-sort-label{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);white-space:nowrap}
+  .mobile-sort-options{display:flex;gap:3px;background:var(--bg-input);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:3px;flex:1}
+  .mobile-sort-btn{flex:1;background:none;border:none;border-radius:6px;padding:5px 4px;font-size:11px;font-family:Inter,sans-serif;color:var(--text-muted);cursor:pointer;transition:all var(--transition);font-weight:500}
+  .mobile-sort-btn.active{background:var(--blue);color:#fff}
+  .notes-panel{overflow:hidden}
   /* Auth card smaller padding on mobile */
   .auth-card { padding: 28px 20px; }
 
@@ -419,6 +426,15 @@ mark{background:rgba(74,138,244,0.18);color:var(--blue);border-radius:2px;paddin
       <div class="panel-actions">
         <button class="icon-btn" id="btn-toggle-view" title="Toggle view"><svg id="view-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
         <button class="icon-btn" id="btn-sidebar-toggle" title="Toggle sidebar"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg></button>
+      </div>
+    </div>
+    <!-- Sort bar: mobile only -->
+    <div class="mobile-sort-bar" id="mobile-sort-bar">
+      <span class="mobile-sort-label">Sort</span>
+      <div class="mobile-sort-options">
+        <button class="mobile-sort-btn active" data-sort="modified">Modified</button>
+        <button class="mobile-sort-btn" data-sort="created">Created</button>
+        <button class="mobile-sort-btn" data-sort="title">Title</button>
       </div>
     </div>
     <div class="notes-container grid-view" id="notes-container">

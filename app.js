@@ -855,10 +855,22 @@ function bindEvents() {
     updatePanelTitle();
   });
 
-  // Sort
+  // Sort (sidebar)
   dom.sortBtns.forEach(b => b.addEventListener('click', () => {
     state.sortBy = b.getAttribute('data-sort');
     dom.sortBtns.forEach(x => x.classList.toggle('active', x === b));
+    // Sync mobile sort bar
+    document.querySelectorAll('.mobile-sort-btn').forEach(x => x.classList.toggle('active', x.getAttribute('data-sort') === state.sortBy));
+    renderList();
+    saveSettings();
+  }));
+
+  // Sort (mobile bar)
+  document.querySelectorAll('.mobile-sort-btn').forEach(b => b.addEventListener('click', () => {
+    state.sortBy = b.getAttribute('data-sort');
+    document.querySelectorAll('.mobile-sort-btn').forEach(x => x.classList.toggle('active', x === b));
+    // Sync sidebar sort buttons
+    dom.sortBtns.forEach(x => x.classList.toggle('active', x.getAttribute('data-sort') === state.sortBy));
     renderList();
     saveSettings();
   }));
