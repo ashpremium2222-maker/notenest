@@ -1009,53 +1009,50 @@ function showUI() {
   renderList();
 }
 
+// Emergency timeout: if loading takes >10s, show auth page
+const LOADING_TIMEOUT_MS = 10000;
+
 async function init() {
-  showLoading();
-
-  // Load settings from localStorage
-  loadSettings();
-
-  // Bind events (they'll work once logged in)
-  bindEvents();
-
-  // Safety timeout: show auth screen if loading takes too long
-  const loadingTimeout = setTimeout(() => {
-    if (state.loading) {
-      console.warn('Loading timeout — showing auth screen');
-      state.loading = false;
-      if (!supabaseReady) {
-        toast('Could not connect to server. Please check your connection.', 'error', 5000);
-      }
-      showAuthScreen();
-    }
-  }, 8000);
-
   try {
+    showLoading();
+
+    // Emergency timeout that fires if init gets stuck
+    const safetyTimer = setTimeout(() => {
+      if (state.loading) {
+        state.loading = false;
+        killLoadingScreen();
+      }
+    }, LOADING_TIMEOUT_MS);
+
+    // Load settings from localStorage
+    loadSettings();
+
+    // Bind events (they'll work once logged in)
+    bindEvents();
+
     if (!supabaseReady || !supabase) {
-      clearTimeout(loadingTimeout);
+      clearTimeout(safetyTimer);
       state.loading = false;
-      toast('Failed to initialize. Try refreshing the page.', 'error', 5000);
+      toast('Could not connect to server. Please check your connection and refresh.', 'error', 5000);
       showAuthScreen();
       return;
     }
 
     // Check existing session
     const { data: { session } } = await supabase.auth.getSession();
+    clearTimeout(safetyTimer);
 
     if (session) {
       state.user = session.user;
       state.session = session;
-      // Load notes from Supabase
       await loadNotes();
-      clearTimeout(loadingTimeout);
+      state.loading = false;
       showAppScreen();
       showUI();
     } else {
-      clearTimeout(loadingTimeout);
+      state.loading = false;
       showAuthScreen();
     }
-
-    state.loading = false;
 
     // Listen for auth state changes
     supabase.auth.onAuthStateChange(async (event, session) => {
@@ -1077,11 +1074,26 @@ async function init() {
       }
     });
   } catch (err) {
-    clearTimeout(loadingTimeout);
     state.loading = false;
     console.error('Init error:', err);
-    toast('Something went wrong loading the app.', 'error', 5000);
+    killLoadingScreen();
+  }
+}
+
+function killLoadingScreen() {
+  try {
+    toast('Something went wrong. Refreshing…', 'error', 4000);
     showAuthScreen();
+  } catch (e) {
+    // Ultimate fallback — use raw DOM
+    try {
+      var el = document.getElementById('loading-screen');
+      if (el) el.style.display = 'none';
+      el = document.getElementById('auth-page');
+      if (el) { el.style.display = ''; el.removeAttribute('hidden'); return; }
+    } catch (_) {}
+    // Nuclear option: rewrite the page
+    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;padding:20px;text-align:center"><div><img src="logo.jpg" style="width:56px;height:56px;border-radius:14px;margin-bottom:14px"/><h1 style="font-size:22px;margin-bottom:8px;color:#111">NoteNest</h1><p style="color:#666;margin-bottom:16px">Could not load the app.</p><button onclick="location.reload()" style="padding:10px 24px;background:#4a8af4;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer">Retry</button></div>';
   }
 }
 
