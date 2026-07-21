@@ -125,7 +125,8 @@ function loadSettings() {
 // ============================================================
 
 function getUsernameFromEmail(email) {
-  return email.replace('@notenest.app', '');
+  if (!email) return '';
+  return email.split('@')[0];
 }
 
 function checkSupabaseReady() {
@@ -134,21 +135,24 @@ function checkSupabaseReady() {
   }
 }
 
-async function signUp(username, password) {
+async function signUp(email, password) {
   checkSupabaseReady();
+  const username = getUsernameFromEmail(email);
   const { data, error } = await supabaseClient.auth.signUp({
-    email: `${username}@notenest.app`,
+    email,
     password,
-    options: { data: { username } }
+    options: {
+      data: { username }
+    }
   });
   if (error) throw error;
   return data;
 }
 
-async function signIn(username, password) {
+async function signIn(email, password) {
   checkSupabaseReady();
   const { data, error } = await supabaseClient.auth.signInWithPassword({
-    email: `${username}@notenest.app`,
+    email,
     password
   });
   if (error) throw error;
@@ -315,11 +319,11 @@ const dom = {
   authPage:         $('auth-page'),
   loginForm:        $('login-form'),
   signupForm:       $('signup-form'),
-  loginUsername:    $('login-username'),
+  loginEmail:    $('login-email'),
   loginPassword:    $('login-password'),
   loginBtn:         $('login-btn'),
   loginError:       $('login-error'),
-  signupUsername:   $('signup-username'),
+  signupEmail:   $('signup-email'),
   signupPassword:   $('signup-password'),
   signupBtn:        $('signup-btn'),
   signupError:      $('signup-error'),
@@ -389,9 +393,9 @@ function showLoading() {
 }
 
 function resetAuthForms() {
-  dom.loginUsername.value = '';
+  dom.loginEmail.value = '';
   dom.loginPassword.value = '';
-  dom.signupUsername.value = '';
+  dom.signupEmail.value = '';
   dom.signupPassword.value = '';
   dom.loginError.setAttribute('hidden', '');
   dom.signupError.setAttribute('hidden', '');
@@ -758,7 +762,7 @@ function bindEvents() {
   // Login form submit
   dom.loginForm.addEventListener('submit', async e => {
     e.preventDefault();
-    const username = dom.loginUsername.value.trim();
+    const username = dom.loginEmail.value.trim();
     const password = dom.loginPassword.value;
     if (!username || !password) return;
 
@@ -769,7 +773,7 @@ function bindEvents() {
       await signIn(username, password);
       // Auth listener will handle the rest
     } catch (err) {
-      dom.loginError.textContent = err.message || 'Invalid username or password.';
+      dom.loginError.textContent = err.message || 'Invalid email or password.';
       dom.loginError.removeAttribute('hidden');
       setBtnLoading(dom.loginBtn, false);
     }
@@ -778,7 +782,7 @@ function bindEvents() {
   // Signup form submit
   dom.signupForm.addEventListener('submit', async e => {
     e.preventDefault();
-    const username = dom.signupUsername.value.trim();
+    const username = dom.signupEmail.value.trim();
     const password = dom.signupPassword.value;
     if (!username || !password) return;
 
@@ -807,7 +811,7 @@ function bindEvents() {
   });
 
   // Enter key on login/signup inputs
-  ['login-username', 'login-password', 'signup-username', 'signup-password'].forEach(id => {
+  ['login-email', 'login-password', 'signup-email', 'signup-password'].forEach(id => {
     const el = $(id);
     if (el) el.addEventListener('keydown', e => {
       if (e.key === 'Enter') {
@@ -1049,8 +1053,8 @@ function ensureCriticalElements() {
       '  </div>',
       '  <form class="auth-form" id="login-form" style="text-align:left">',
       '    <div style="margin-bottom:16px">',
-      '      <label style="display:block;font-size:13px;font-weight:500;color:#374151;margin-bottom:6px" for="login-username">Username</label>',
-      '      <input type="text" id="login-username" placeholder="Enter your username" style="width:100%;padding:10px 14px;border:1px solid #e5eaf5;border-radius:8px;font-size:14px;background:#f8faff;outline:none;box-sizing:border-box" required/>',
+      '      <label style="display:block;font-size:13px;font-weight:500;color:#374151;margin-bottom:6px" for="login-email">Email</label>',
+      '      <input type="text" id="login-email" placeholder="Enter your email" type="email" style="width:100%;padding:10px 14px;border:1px solid #e5eaf5;border-radius:8px;font-size:14px;background:#f8faff;outline:none;box-sizing:border-box" required/>',
       '    </div>',
       '    <div style="margin-bottom:20px">',
       '      <label style="display:block;font-size:13px;font-weight:500;color:#374151;margin-bottom:6px" for="login-password">Password</label>',
@@ -1061,8 +1065,8 @@ function ensureCriticalElements() {
       '  </form>',
       '  <form class="auth-form" id="signup-form" hidden style="text-align:left">',
       '    <div style="margin-bottom:16px">',
-      '      <label style="display:block;font-size:13px;font-weight:500;color:#374151;margin-bottom:6px" for="signup-username">Username</label>',
-      '      <input type="text" id="signup-username" placeholder="Choose a username" style="width:100%;padding:10px 14px;border:1px solid #e5eaf5;border-radius:8px;font-size:14px;background:#f8faff;outline:none;box-sizing:border-box" required minlength="3"/>',
+      '      <label style="display:block;font-size:13px;font-weight:500;color:#374151;margin-bottom:6px" for="signup-email">Email</label>',
+      '      <input type="text" id="signup-email" placeholder="Enter your email address" type="email" style="width:100%;padding:10px 14px;border:1px solid #e5eaf5;border-radius:8px;font-size:14px;background:#f8faff;outline:none;box-sizing:border-box" required minlength="3"/>',
       '    </div>',
       '    <div style="margin-bottom:20px">',
       '      <label style="display:block;font-size:13px;font-weight:500;color:#374151;margin-bottom:6px" for="signup-password">Password</label>',
@@ -1093,11 +1097,11 @@ function ensureCriticalElements() {
   // Refresh DOM refs for auth elements that were created
   dom.loginForm = dom.loginForm || $('login-form');
   dom.signupForm = dom.signupForm || $('signup-form');
-  dom.loginUsername = dom.loginUsername || $('login-username');
+  dom.loginEmail = dom.loginEmail || $('login-email');
   dom.loginPassword = dom.loginPassword || $('login-password');
   dom.loginBtn = dom.loginBtn || $('login-btn');
   dom.loginError = dom.loginError || $('login-error');
-  dom.signupUsername = dom.signupUsername || $('signup-username');
+  dom.signupEmail = dom.signupEmail || $('signup-email');
   dom.signupPassword = dom.signupPassword || $('signup-password');
   dom.signupBtn = dom.signupBtn || $('signup-btn');
   dom.signupError = dom.signupError || $('signup-error');
