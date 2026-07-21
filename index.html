@@ -11,7 +11,7 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{-webkit-font-smoothing:antialiased;font-size:16px}
-:root{--bg-app:#f0f4ff;--bg-sidebar:#fff;--bg-panel:#f7f9ff;--bg-editor:#fff;--bg-card:#fff;--bg-card-hov:#f0f4ff;--bg-input:#f0f4ff;--bg-toolbar:#fff;--bg-modal:#fff;--blue:#4a8af4;--blue-dark:#3570e0;--blue-light:#e8f0fe;--blue-mid:#c7d9fc;--text-primary:#111827;--text-secondary:#4b5563;--text-muted:#9ca3af;--text-on-blue:#fff;--border:#e5eaf5;--border-focus:#4a8af4;--shadow-sm:0 1px 3px rgba(74,138,244,0.08);--shadow-md:0 4px 16px rgba(74,138,244,0.12);--shadow-lg:0 8px 32px rgba(74,138,244,0.16);--radius-sm:8px;--radius-md:12px;--radius-lg:16px;--transition:0.18s cubic-bezier(0.4,0,0.2,1);--sidebar-w:252px;--notes-panel-w:300px;--danger:#ef4444;--danger-bg:#fef2f2;--pin-color:#f59e0b;--pin-bg:#fffbeb}
+:root{--bg-app:#f0f4ff;--bg-sidebar:#fff;--bg-panel:#f7f9ff;--bg-editor:#fff;--bg-card:#fff;--bg-card-hov:#f0f4ff;--bg-input:#f0f4ff;--bg-toolbar:#fff;--bg-modal:#fff;--blue:#4a8af4;--blue-dark:#3570e0;--blue-light:#e8f0fe;--blue-mid:#c7d9fc;--text-primary:#111827;--text-secondary:#4b5563;--text-muted:#9ca3af;--text-on-blue:#fff;--border:#e5eaf5;--border-focus:#4a8af4;--shadow-sm:0 1px 3px rgba(74,138,244,0.08);--shadow-md:0 4px 16px rgba(74,138,244,0.12);--shadow-lg:0 8px 32px rgba(74,138,244,0.16);--radius-sm:8px;--radius-md:12px;--radius-lg:16px;--transition:0.18s cubic-bezier(0.4,0,0.2,1);--sidebar-w:252px;--notes-panel-w:340px;--danger:#ef4444;--danger-bg:#fef2f2;--pin-color:#f59e0b;--pin-bg:#fffbeb}
 [data-theme="dark"]{--bg-app:#0d0d12;--bg-sidebar:#111118;--bg-panel:#0f0f16;--bg-editor:#111118;--bg-card:#18181f;--bg-card-hov:#1e1e28;--bg-input:#18181f;--bg-toolbar:#111118;--bg-modal:#18181f;--blue-dark:#6ba0f7;--blue-light:rgba(74,138,244,0.12);--blue-mid:rgba(74,138,244,0.2);--text-primary:#f1f5ff;--text-secondary:#9ba8c0;--text-muted:#4a5270;--border:rgba(255,255,255,0.07);--shadow-sm:0 1px 4px rgba(0,0,0,0.4);--shadow-md:0 4px 16px rgba(0,0,0,0.5);--shadow-lg:0 8px 32px rgba(0,0,0,0.6);--danger:#f87171;--danger-bg:rgba(239,68,68,0.1);--pin-color:#fbbf24;--pin-bg:rgba(251,191,36,0.1)}
 body{font-family:Inter,system-ui,sans-serif;background:var(--bg-app);color:var(--text-primary);height:100vh;overflow:hidden;transition:background var(--transition),color var(--transition)}
 .loading-screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;background:var(--bg-app);z-index:2000;transition:opacity .4s ease}
@@ -46,11 +46,9 @@ body{font-family:Inter,system-ui,sans-serif;background:var(--bg-app);color:var(-
 .auth-toggle-text{font-size:13px;color:var(--text-muted)}
 .auth-toggle-link{color:var(--blue);text-decoration:none;font-weight:600;cursor:pointer;transition:color var(--transition)}
 .auth-toggle-link:hover{color:var(--blue-dark);text-decoration:underline}
-.app-shell{display:grid;grid-template-columns:var(--sidebar-w) var(--notes-panel-w) 1fr;height:100vh;transition:grid-template-columns .3s cubic-bezier(0.4,0,0.2,1)}
+.app-shell{display:grid;grid-template-columns:var(--notes-panel-w) 1fr;height:100vh;transition:grid-template-columns .3s cubic-bezier(0.4,0,0.2,1)}
 .app-shell[hidden]{display:none}
-.app-shell.sidebar-hidden{grid-template-columns:0 var(--notes-panel-w) 1fr}
-.sidebar{background:var(--bg-sidebar);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;transition:opacity .3s ease,transform .3s ease,background var(--transition),border-color var(--transition)}
-.app-shell.sidebar-hidden .sidebar{opacity:0;pointer-events:none;transform:translateX(-12px)}
+.sidebar{display:none}
 .brand{display:flex;align-items:center;gap:11px;padding:20px 18px 18px;border-bottom:1px solid var(--border)}
 .brand-logo{width:38px;height:38px;border-radius:10px;object-fit:cover;flex-shrink:0;box-shadow:0 2px 8px rgba(74,138,244,0.25)}
 .brand-name{font-family:Outfit,sans-serif;font-size:17px;font-weight:700;color:var(--text-primary);line-height:1;display:block}
@@ -95,6 +93,15 @@ body{font-family:Inter,system-ui,sans-serif;background:var(--bg-app);color:var(-
 [data-theme="dark"] .light-icon{display:none}
 .theme-label{font-weight:500}
 .notes-panel{background:var(--bg-panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;transition:background var(--transition),border-color var(--transition)}
+.panel-controls{display:flex;flex-direction:column;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg-panel);transition:background var(--transition),border-color var(--transition)}
+.panel-controls .tag-filter-list{display:flex;flex-direction:row;flex-wrap:wrap;gap:4px}
+.panel-controls .tag-filter-item{padding:4px 10px;font-size:12px}
+.panel-controls .btn-new-note{margin:0}
+.panel-bottom{display:flex;align-items:center;justify-content:space-between;padding:6px 12px;border-top:1px solid var(--border);flex-shrink:0;background:var(--bg-panel);gap:6px;transition:background var(--transition),border-color var(--transition)}
+.panel-bottom-left{display:flex;align-items:center;gap:6px;min-width:0;flex:1}
+.panel-bottom-stats{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text-muted);white-space:nowrap}
+.panel-bottom-stats span{font-weight:600;color:var(--text-secondary)}
+.panel-bottom-right{display:flex;align-items:center;gap:2px;flex-shrink:0}
 .panel-header{display:flex;align-items:center;justify-content:space-between;padding:18px 14px 12px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg-panel);transition:background var(--transition),border-color var(--transition)}
 .panel-title{font-family:Outfit,sans-serif;font-size:15px;font-weight:700;color:var(--text-primary)}
 .panel-actions{display:flex;align-items:center;gap:2px}
@@ -366,54 +373,7 @@ mark{background:rgba(74,138,244,0.18);color:var(--blue);border-radius:2px;paddin
 
 <div class="app-shell" id="app-shell" hidden>
   <div class="sidebar-overlay" id="sidebar-overlay"></div>
-  <aside class="sidebar" id="sidebar">
-    <div class="brand">
-      <img src="logo.jpg" alt="NoteNest logo" class="brand-logo" />
-      <div class="brand-text">
-        <span class="brand-name">NoteNest</span>
-        <span class="brand-tagline">Capture. Organize. Remember.</span>
-      </div>
-    </div>
-    <div class="sidebar-search">
-      <div class="search-wrapper">
-        <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-        <input type="search" id="search-input" class="search-input" placeholder="Search notes…" autocomplete="off" />
-      </div>
-    </div>
-    <button class="btn-new-note" id="btn-new-note"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg> New Note</button>
-    <div class="sidebar-section">
-      <p class="sidebar-section-title">Tags</p>
-      <div class="tag-filter-list" id="tag-filter-list">
-        <button class="tag-filter-item active" data-tag="all"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg> All Notes <span class="tag-count" id="count-all">0</span></button>
-      </div>
-    </div>
-    <div class="sidebar-section">
-      <p class="sidebar-section-title">Sort By</p>
-      <div class="sort-options">
-        <button class="sort-btn active" data-sort="modified">Modified</button>
-        <button class="sort-btn" data-sort="created">Created</button>
-        <button class="sort-btn" data-sort="title">Title</button>
-      </div>
-    </div>
-    <div class="sidebar-bottom">
-      <div class="sidebar-stats">
-        <div class="stat-item"><span class="stat-num" id="stat-notes">0</span><span class="stat-label">Notes</span></div>
-        <div class="stat-divider"></div>
-        <div class="stat-item"><span class="stat-num" id="stat-tags">0</span><span class="stat-label">Tags</span></div>
-        <div class="stat-divider"></div>
-        <div class="stat-item"><span class="stat-num" id="stat-words">0</span><span class="stat-label">Words</span></div>
-      </div>
-      <div class="sidebar-user-row">
-        <div class="sidebar-user"><div class="sidebar-avatar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><span class="sidebar-username" id="sidebar-username">user</span></div>
-        <button class="icon-btn logout-btn" id="btn-logout" title="Sign out"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
-      </div>
-      <button class="theme-toggle" id="theme-toggle" title="Toggle dark mode">
-        <span class="theme-icon light-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></span>
-        <span class="theme-icon dark-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span>
-        <span class="theme-label" id="theme-label">Dark Mode</span>
-      </button>
-    </div>
-  </aside>
+  
   <main class="notes-panel" id="notes-panel">
     <div class="panel-header">
       <div style="display:flex;align-items:center;gap:8px">
@@ -421,6 +381,7 @@ mark{background:rgba(74,138,244,0.18);color:var(--blue);border-radius:2px;paddin
         <button class="icon-btn btn-hamburger" id="btn-hamburger" title="Open menu" aria-label="Open sidebar">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>
+        <img src="logo.jpg" alt="NoteNest" style="width:28px;height:28px;border-radius:7px;object-fit:cover;flex-shrink:0" />
         <h1 class="panel-title" id="panel-title">All Notes</h1>
       </div>
       <div class="panel-actions">
@@ -428,13 +389,24 @@ mark{background:rgba(74,138,244,0.18);color:var(--blue);border-radius:2px;paddin
         <button class="icon-btn" id="btn-sidebar-toggle" title="Toggle sidebar"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg></button>
       </div>
     </div>
-    <!-- Sort bar: mobile only -->
-    <div class="mobile-sort-bar" id="mobile-sort-bar">
-      <span class="mobile-sort-label">Sort</span>
-      <div class="mobile-sort-options">
-        <button class="mobile-sort-btn active" data-sort="modified">Modified</button>
-        <button class="mobile-sort-btn" data-sort="created">Created</button>
-        <button class="mobile-sort-btn" data-sort="title">Title</button>
+    <!-- Integrated controls (replaces sidebar on desktop) -->
+    <div class="panel-controls">
+      <div class="search-wrapper">
+        <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="search" id="search-input" class="search-input" placeholder="Search notes…" autocomplete="off" />
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button class="btn-new-note" id="btn-new-note" style="margin:0;flex:1"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg> New Note</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="tag-filter-list" id="tag-filter-list" style="flex-direction:row;flex-wrap:wrap;gap:4px">
+          <button class="tag-filter-item active" data-tag="all" style="padding:4px 10px;font-size:12px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg> All <span class="tag-count" id="count-all">0</span></button>
+        </div>
+      </div>
+      <div class="sort-options">
+        <button class="sort-btn active" data-sort="modified">Modified</button>
+        <button class="sort-btn" data-sort="created">Created</button>
+        <button class="sort-btn" data-sort="title">Title</button>
       </div>
     </div>
     <div class="notes-container grid-view" id="notes-container">
@@ -443,6 +415,20 @@ mark{background:rgba(74,138,244,0.18);color:var(--blue);border-radius:2px;paddin
         <p class="empty-title">No notes yet</p>
         <p class="empty-sub">Click <strong>New Note</strong> to get started</p>
         <button class="btn-empty-cta" id="btn-empty-cta">+ New Note</button>
+      </div>
+    </div>
+    <div class="panel-bottom">
+      <div class="panel-bottom-left">
+        <div class="sidebar-avatar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+        <span class="sidebar-username" id="sidebar-username" style="font-size:11px">user</span>
+        <span class="panel-bottom-stats"><span id="stat-notes">0</span>N &middot; <span id="stat-tags">0</span>T &middot; <span id="stat-words">0</span>W</span>
+      </div>
+      <div class="panel-bottom-right">
+        <button class="icon-btn" id="theme-toggle" title="Toggle dark mode" style="width:26px;height:26px">
+          <span class="theme-icon light-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></span>
+          <span class="theme-icon dark-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span>
+        </button>
+        <button class="icon-btn logout-btn" id="btn-logout" title="Sign out" style="width:26px;height:26px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
       </div>
     </div>
   </main>
