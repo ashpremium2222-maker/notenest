@@ -435,7 +435,9 @@ function setBtnLoading(btn, loading) {
 function applyTheme(t) {
   state.theme = t;
   dom.htmlEl.setAttribute('data-theme', t);
-  dom.themeLabel.textContent = t === 'dark' ? 'Light Mode' : 'Dark Mode';
+  if (dom.themeLabel) {
+    dom.themeLabel.textContent = t === 'dark' ? 'Light Mode' : 'Dark Mode';
+  }
 }
 
 function toggleTheme() {
@@ -776,10 +778,11 @@ function bindEvents() {
 
     try {
       await signIn(username, password);
-      // Auth listener will handle the rest
+      // Auth listener will handle showing app screen
     } catch (err) {
       dom.loginError.textContent = err.message || 'Invalid email or password.';
       dom.loginError.removeAttribute('hidden');
+    } finally {
       setBtnLoading(dom.loginBtn, false);
     }
   });
@@ -801,6 +804,7 @@ function bindEvents() {
     } catch (err) {
       dom.signupError.textContent = err.message || 'Could not create account.';
       dom.signupError.removeAttribute('hidden');
+    } finally {
       setBtnLoading(dom.signupBtn, false);
     }
   });
