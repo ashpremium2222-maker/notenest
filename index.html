@@ -147,9 +147,12 @@ kbd{background:var(--bg-input);border:1.5px solid var(--border);border-radius:5p
 .word-count{font-size:11px;color:var(--text-muted);padding:0 6px}
 .pin-btn.pinned{background:var(--pin-bg);color:var(--pin-color)}
 .delete-btn:hover{background:var(--danger-bg)!important;color:var(--danger)!important}
-.note-title-input{width:100%;background:none;border:none;outline:none;color:var(--text-primary);font-family:Outfit,sans-serif;font-size:26px;font-weight:700;padding:22px 28px 8px;line-height:1.2;transition:color var(--transition)}
-.note-title-input::placeholder{color:var(--text-muted)}
-.tags-row{display:flex;flex-wrap:wrap;align-items:center;gap:5px;padding:6px 28px 10px;border-bottom:1px solid var(--border);min-height:36px;transition:border-color var(--transition)}
+.editor-meta-header{padding:16px 20px 0;display:flex;flex-direction:column;gap:10px}
+.note-title-input{width:100%;background:var(--bg-input);border:1.5px solid var(--border);border-radius:var(--radius-md);outline:none;color:var(--text-primary);font-family:Outfit,sans-serif;font-size:24px;font-weight:700;padding:14px 16px;line-height:1.2;transition:all var(--transition);box-shadow:var(--shadow-sm)}
+.note-title-input:focus{border-color:var(--border-focus);background:var(--bg-editor);box-shadow:0 0 0 3px var(--blue-light)}
+.note-title-input::placeholder{color:var(--text-muted);font-weight:400}
+.tags-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:10px 14px;background:var(--bg-input);border:1.5px solid var(--border);border-radius:var(--radius-md);min-height:42px;transition:all var(--transition);box-shadow:var(--shadow-sm)}
+.tags-row:focus-within{border-color:var(--border-focus);background:var(--bg-editor);box-shadow:0 0 0 3px var(--blue-light)}
 .tags-display{display:flex;flex-wrap:wrap;gap:5px}
 .tag-pill{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;padding:3px 8px 3px 10px;border-radius:100px;background:var(--blue-light);color:var(--blue);border:1.5px solid var(--blue-mid);animation:pillIn .15s ease;transition:background var(--transition),border-color var(--transition)}
 @keyframes pillIn{from{transform:scale(.8);opacity:0}to{transform:scale(1);opacity:1}}
@@ -157,8 +160,8 @@ kbd{background:var(--bg-input);border:1.5px solid var(--border);border-radius:5p
 .tag-pill-remove:hover{opacity:1}
 .tags-input{background:none;border:none;outline:none;color:var(--text-secondary);font-size:12px;font-family:Inter,sans-serif;min-width:80px;flex:1;transition:color var(--transition)}
 .tags-input::placeholder{color:var(--text-muted)}
-.color-row{display:flex;align-items:center;gap:7px;padding:8px 28px 4px}
-.color-dot{width:14px;height:14px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:all var(--transition)}
+.color-row{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg-input);border:1.5px solid var(--border);border-radius:var(--radius-md);transition:all var(--transition);box-shadow:var(--shadow-sm)}
+.color-dot{width:18px;height:18px;border-radius:50%;border:2.5px solid transparent;cursor:pointer;transition:all var(--transition);flex-shrink:0}
 .color-dot[data-color="default"]{background:#4a8af4}
 .color-dot[data-color="rose"]{background:#f43f5e}
 .color-dot[data-color="amber"]{background:#f59e0b}
@@ -453,18 +456,20 @@ mark{background:rgba(74,138,244,0.18);color:var(--blue);border-radius:2px;paddin
           <button class="toolbar-btn delete-btn" id="btn-delete" title="Delete note"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg></button>
         </div>
       </div>
-      <input type="text" class="note-title-input" id="note-title-input" placeholder="Note title…" maxlength="120" />
-      <div class="tags-row" id="tags-input-wrapper">
-        <div class="tags-display" id="tags-display"></div>
-        <input type="text" class="tags-input" id="tags-input" placeholder="Add tags…" autocomplete="off" />
-      </div>
-      <div class="color-row" id="note-color-picker">
-        <button class="color-dot active" data-color="default" title="Blue"></button>
-        <button class="color-dot" data-color="rose" title="Rose"></button>
-        <button class="color-dot" data-color="amber" title="Amber"></button>
-        <button class="color-dot" data-color="emerald" title="Emerald"></button>
-        <button class="color-dot" data-color="sky" title="Sky"></button>
-        <button class="color-dot" data-color="violet" title="Violet"></button>
+      <div class="editor-meta-header">
+        <input type="text" class="note-title-input" id="note-title-input" placeholder="Note title…" maxlength="120" />
+        <div class="tags-row" id="tags-input-wrapper">
+          <div class="tags-display" id="tags-display"></div>
+          <input type="text" class="tags-input" id="tags-input" placeholder="Add tags…" autocomplete="off" />
+        </div>
+        <div class="color-row" id="note-color-picker">
+          <button class="color-dot active" data-color="default" title="Blue"></button>
+          <button class="color-dot" data-color="rose" title="Rose"></button>
+          <button class="color-dot" data-color="amber" title="Amber"></button>
+          <button class="color-dot" data-color="emerald" title="Emerald"></button>
+          <button class="color-dot" data-color="sky" title="Sky"></button>
+          <button class="color-dot" data-color="violet" title="Violet"></button>
+        </div>
       </div>
       <div class="rich-editor" id="rich-editor" contenteditable="true" data-placeholder="Start writing…" spellcheck="true"></div>
       <div class="editor-footer">
