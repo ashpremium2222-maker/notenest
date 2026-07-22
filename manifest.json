@@ -1,24 +1,42 @@
 {
+  "id": "/index.html",
   "name": "NoteNest",
   "short_name": "NoteNest",
   "description": "NoteNest — Capture. Organize. Remember.",
-  "start_url": "./",
+  "start_url": "./index.html",
+  "scope": "./",
+  "lang": "en-US",
+  "dir": "ltr",
   "display": "standalone",
+  "display_override": ["standalone", "window-controls-overlay"],
   "orientation": "portrait",
   "background_color": "#f0f4ff",
   "theme_color": "#4a8af4",
+  "categories": ["productivity", "utilities"],
   "icons": [
     {
-      "src": "logo.jpg",
+      "src": "icon-192.png",
       "sizes": "192x192",
-      "type": "image/jpeg",
-      "purpose": "any maskable"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "logo.jpg",
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icon-512.png",
       "sizes": "512x512",
-      "type": "image/jpeg",
-      "purpose": "any maskable"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
