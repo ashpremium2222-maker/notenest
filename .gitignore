@@ -6,3 +6,10 @@ package-lock.json
 update_to_email.js
 generate_icons.js
 generate_icons.ps1
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example
