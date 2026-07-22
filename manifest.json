@@ -8,11 +8,51 @@
   "lang": "en-US",
   "dir": "ltr",
   "display": "standalone",
-  "display_override": ["standalone", "window-controls-overlay"],
+  "display_override": ["standalone", "window-controls-overlay", "minimal-ui"],
   "orientation": "portrait",
   "background_color": "#f0f4ff",
   "theme_color": "#4a8af4",
   "categories": ["productivity", "utilities"],
+  "iarc_rating_id": "e84c5932-a5e2-4113-bb13-f6a7db15f79a",
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "note_taking": {
+    "new_note_url": "./index.html?new-note"
+  },
+  "shortcuts": [
+    {
+      "name": "New Note",
+      "short_name": "New Note",
+      "description": "Create a new note instantly",
+      "url": "./index.html?new-note",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshot-mobile.png",
+      "sizes": "720x1280",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "NoteNest Mobile App"
+    },
+    {
+      "src": "screenshot-desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "NoteNest Desktop App"
+    }
+  ],
   "icons": [
     {
       "src": "icon-192.png",
