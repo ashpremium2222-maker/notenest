@@ -494,6 +494,7 @@ const dom = {
   btnArchive:       $('btn-archive'),
   btnDelete:        $('btn-delete'),
   btnCloseEditor:   $('btn-close-editor'),
+  btnCloseDelete:   $('btn-close-delete'),
   toastContainer:   $('toast-container'),
   deleteModal:      $('delete-modal'),
   btnCancel:        $('btn-modal-cancel'),
@@ -1260,6 +1261,7 @@ function bindEvents() {
   // Delete
   dom.btnDelete.addEventListener('click', () => { if (state.activeNoteId) openDeleteModal(state.activeNoteId); });
   dom.btnCancel.addEventListener('click', closeDeleteModal);
+  dom.btnCloseDelete.addEventListener('click', closeDeleteModal);
   dom.btnConfirm.addEventListener('click', async () => {
     if (pendingDelete) {
       await deleteNote(pendingDelete);
@@ -1870,6 +1872,10 @@ document.getElementById('btn-close-invite')?.addEventListener('click', () => {
   document.getElementById('invite-modal').setAttribute('hidden', '');
 });
 
+document.getElementById('invite-modal')?.addEventListener('click', e => {
+  if (e.target === document.getElementById('invite-modal')) document.getElementById('invite-modal').setAttribute('hidden', '');
+});
+
 document.getElementById('btn-send-invite')?.addEventListener('click', async () => {
   const email = document.getElementById('invite-email').value.trim();
   const perm = document.getElementById('invite-perm').value;
@@ -1931,6 +1937,10 @@ document.getElementById('btn-view-activity')?.addEventListener('click', async ()
 
 document.getElementById('btn-close-activity')?.addEventListener('click', () => {
   document.getElementById('activity-modal').setAttribute('hidden', '');
+});
+
+document.getElementById('activity-modal')?.addEventListener('click', e => {
+  if (e.target === document.getElementById('activity-modal')) document.getElementById('activity-modal').setAttribute('hidden', '');
 });
 
 // Checklists

@@ -435,6 +435,8 @@ kbd { background: var(--glass-bg-subtle); backdrop-filter: blur(6px); border: 1p
 .modal { background: var(--glass-bg-strong); backdrop-filter: blur(var(--glass-blur-heavy)); -webkit-backdrop-filter: blur(var(--glass-blur-heavy)); border: 1px solid var(--glass-border); border-radius: var(--radius-xl); padding: 32px; max-width: 380px; width: 90%; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; animation: modalIn 0.35s var(--transition-spring); box-shadow: var(--glass-shadow-lg), var(--glass-inner); position: relative; overflow: hidden; }
 .modal::before { content: ''; position: absolute; inset: 0; background: var(--glass-highlight); border-radius: inherit; pointer-events: none; }
 .modal > * { position: relative; z-index: 1; }
+.modal-close-btn { position: absolute; top: 12px; right: 12px; width: 48px; height: 48px; z-index: 2; }
+#btn-close-editor { width: 40px; height: 40px; }
 @keyframes modalIn { from { transform: scale(0.9) translateY(12px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
 .modal-icon { width: 52px; height: 52px; background: var(--danger-bg); border: 1px solid rgba(239,68,68,0.15); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--danger); }
 .modal-title { font-family: 'Outfit', sans-serif; font-size: 20px; font-weight: 700; color: var(--text-primary); }
@@ -672,6 +674,7 @@ mark { background: rgba(74,138,244,0.2); color: var(--blue); border-radius: 3px;
 
   /* Modal */
   .modal { padding: 28px 24px; max-width: 340px; border-radius: var(--radius-lg); }
+  .modal-close-btn { width: 48px; height: 48px; }
   .btn-cancel, .btn-confirm { padding: 12px; font-size: 14px; } /* bigger touch targets */
 
   /* Disable hover effects on mobile (prevents stuck hover state) */
@@ -704,6 +707,7 @@ mark { background: rgba(74,138,244,0.2); color: var(--blue); border-radius: 3px;
   .auth-title { font-size: 22px; }
   .editor-toolbar { padding: 4px 6px; gap: 2px; }
   .toolbar-btn { min-width: 30px; height: 30px; font-size: 11px; }
+  #btn-close-editor { width: 44px; height: 44px; }
   .note-card-title { font-size: 12px; }
   .note-card-footer { flex-direction: column; align-items: flex-start; gap: 3px; }
 }
