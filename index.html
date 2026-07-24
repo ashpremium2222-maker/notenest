@@ -16,6 +16,86 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="style.css?v=2026" />
+<style>
+/* CSS Animations and Styles for NoteNest Phase 1 */
+.note-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  animation: cardEnter 0.4s ease forwards;
+  opacity: 0;
+  transform: translateY(10px);
+}
+.note-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+@keyframes cardEnter {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.btn-new-note, .icon-btn, .toolbar-btn, .auth-btn {
+  transition: transform 0.1s ease, background-color 0.2s ease, opacity 0.2s ease;
+}
+.btn-new-note:active, .icon-btn:active, .toolbar-btn:active, .auth-btn:active {
+  transform: scale(0.95);
+}
+.modal {
+  animation: modalEnter 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+@keyframes modalEnter {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+.toast {
+  animation: toastSlide 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+@keyframes toastSlide {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.toast.exiting {
+  animation: toastExit 0.2s ease forwards;
+}
+@keyframes toastExit {
+  to { opacity: 0; transform: translateX(20px); }
+}
+.section-nav {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+.section-nav::-webkit-scrollbar { display: none; }
+.section-nav-btn {
+  padding: 6px 12px;
+  border-radius: 16px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+.section-nav-btn.active {
+  background: var(--primary-color);
+  color: #fff;
+  border-color: var(--primary-color);
+}
+.note-card-favorite, .note-card-archive {
+  margin-left: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.note-card-favorite svg { fill: #f59e0b; color: #f59e0b; }
+.note-card-archive svg { color: var(--text-muted); }
+.toolbar-btn.favorited svg { fill: #f59e0b; color: #f59e0b; }
+.toolbar-btn.archived svg { color: var(--text-secondary); }
+</style>
 </head>
 <body>
 
@@ -106,7 +186,20 @@
         <h1 class="panel-title" id="panel-title" style="font-size:14px;font-weight:600;color:var(--text-secondary);">All Notes</h1>
       </div>
       <div class="panel-actions">
-        <button class="btn-hamburger" id="btn-hamburger" title="Menu"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+        <div class="notification-wrapper" style="position:relative;display:inline-block">
+    <button class="icon-btn" id="btn-notifications" title="Notifications" style="position:relative">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+      <span id="notif-badge" class="notif-badge" hidden style="position:absolute;top:0;right:0;background:red;color:white;font-size:10px;border-radius:50%;width:14px;height:14px;display:flex;align-items:center;justify-content:center;"></span>
+    </button>
+    <div id="notif-dropdown" class="notif-dropdown" hidden style="position:absolute;top:100%;right:0;width:300px;background:var(--surface-1);border:1px solid var(--border-color);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.1);z-index:100;max-height:400px;overflow-y:auto;">
+      <div style="padding:10px;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center">
+        <strong>Notifications</strong>
+        <button id="btn-notif-mark-read" style="font-size:12px;cursor:pointer;background:none;border:none;color:var(--primary-color)">Mark all read</button>
+      </div>
+      <div id="notif-list" style="padding:10px;"></div>
+    </div>
+  </div>
+  <button class="btn-hamburger" id="btn-hamburger" title="Menu"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
         <button class="icon-btn" id="btn-toggle-view" title="Toggle view"><svg id="view-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
       </div>
     </div>
@@ -116,15 +209,22 @@
         <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
         <input type="search" id="search-input" class="search-input" placeholder="Search notes…" autocomplete="off" />
       </div>
-      <div style="display:flex;gap:6px;align-items:center">
+      <div class="section-nav">
+        <button class="section-nav-btn active" data-section="all">All Notes</button>
+        <button class="section-nav-btn" data-section="favorites">★ Favorites</button>
+        <button class="section-nav-btn" data-section="archived">Archive</button>
+        <button class="section-nav-btn" data-section="recent">Recent</button>
+        <button class="section-nav-btn" data-section="shared">Shared</button>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;margin-top:8px">
         <button class="btn-new-note" id="btn-new-note" style="margin:0;flex:1"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg> New Note</button>
       </div>
-      <div style="display:flex;align-items:center;gap:8px">
+      <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
         <div class="tag-filter-list" id="tag-filter-list" style="flex-direction:row;flex-wrap:wrap;gap:4px">
           <button class="tag-filter-item active" data-tag="all" style="padding:4px 10px;font-size:12px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg> All <span class="tag-count" id="count-all">0</span></button>
         </div>
       </div>
-      <div class="sort-options">
+      <div class="sort-options" style="margin-top:8px">
         <button class="sort-btn active" data-sort="modified">Modified</button>
         <button class="sort-btn" data-sort="created">Created</button>
         <button class="sort-btn" data-sort="title">Title</button>
@@ -164,7 +264,9 @@
       <div class="editor-toolbar">
         <div class="toolbar-left">
           <button class="icon-btn" id="btn-close-editor" title="Close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
-          <div class="toolbar-sep"></div>
+          <button class="toolbar-btn" id="btn-invite" title="Invite Collaborators"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></button>
+   <button class="toolbar-btn" id="btn-checklist" title="Checklist"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></button>
+   <div class="toolbar-sep"></div>
           <button class="toolbar-btn" id="fmt-bold" title="Bold"><b>B</b></button>
           <button class="toolbar-btn" id="fmt-italic" title="Italic"><i>I</i></button>
           <button class="toolbar-btn" id="fmt-underline" title="Underline"><u>U</u></button>
@@ -177,6 +279,8 @@
         </div>
         <div class="toolbar-right">
           <span class="word-count" id="word-count">0 words</span>
+          <button class="toolbar-btn favorite-btn" id="btn-favorite" title="Add to favorites"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></button>
+          <button class="toolbar-btn archive-btn" id="btn-archive" title="Archive note"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg></button>
           <button class="toolbar-btn pin-btn" id="btn-pin" title="Pin note"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 17-1-9 9 1-2 3 3 3-3 3-3-3-3 2z"/><path d="m8 21 4-4"/></svg></button>
           <button class="toolbar-btn delete-btn" id="btn-delete" title="Delete note"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg></button>
         </div>
@@ -196,8 +300,21 @@
           <button class="color-dot" data-color="violet" title="Violet"></button>
         </div>
       </div>
-      <div class="rich-editor-wrapper">
+      <div class="collaborators-row" id="collaborators-row" style="padding:0 24px;display:flex;gap:4px;margin-bottom:8px" hidden></div>
+   <div class="rich-editor-wrapper">
         <div class="rich-editor" id="rich-editor" contenteditable="true" data-placeholder="Start writing…" spellcheck="true"></div>
+   <div class="checklist-area" id="checklist-area" style="padding: 10px 24px;" hidden>
+     <div class="checklist-progress" style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+       <span id="checklist-progress-text" style="font-size:12px;color:var(--text-secondary)"></span>
+       <div style="flex:1;height:6px;background:var(--surface-2);border-radius:3px;overflow:hidden">
+         <div id="checklist-progress-bar" style="height:100%;background:var(--primary-color);width:0%;transition:width 0.3s"></div>
+       </div>
+     </div>
+     <div id="checklist-items"></div>
+     <div style="margin-top:10px">
+       <input type="text" id="new-checklist-item" placeholder="Add checklist item..." style="width:100%;padding:8px;border:1px solid var(--border-color);border-radius:4px" />
+     </div>
+   </div>
         <div class="editor-footer">
           <span class="editor-meta" id="editor-meta">Just now</span>
           <span class="auto-save" id="auto-save-indicator"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Saved</span>
@@ -222,5 +339,35 @@
 </div>
 
 <script src="app.js"></script>
+<div class="modal-overlay" id="invite-modal" hidden style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;display:flex;align-items:center;justify-content:center">
+    <div class="modal" style="background:var(--surface-1);padding:24px;border-radius:12px;width:100%;max-width:400px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:16px">
+        <h2 style="margin:0;font-size:18px">Share Note</h2>
+        <button id="btn-close-invite" style="background:none;border:none;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <input type="email" id="invite-email" placeholder="Email address" style="flex:1;padding:8px;border:1px solid var(--border-color);border-radius:4px" />
+        <select id="invite-perm" style="padding:8px;border:1px solid var(--border-color);border-radius:4px">
+          <option value="view">View</option>
+          <option value="edit">Edit</option>
+        </select>
+        <button id="btn-send-invite" style="padding:8px 16px;background:var(--primary-color);color:white;border:none;border-radius:4px;cursor:pointer">Invite</button>
+      </div>
+      <div id="collaborators-list"></div>
+      <div style="margin-top:16px;text-align:center">
+        <button id="btn-view-activity" style="font-size:13px;color:var(--primary-color);background:none;border:none;cursor:pointer">View Activity History</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="activity-modal" hidden style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;display:flex;align-items:center;justify-content:center">
+    <div class="modal" style="background:var(--surface-1);padding:24px;border-radius:12px;width:100%;max-width:400px;max-height:80vh;display:flex;flex-direction:column">
+      <div style="display:flex;justify-content:space-between;margin-bottom:16px">
+        <h2 style="margin:0;font-size:18px">Activity History</h2>
+        <button id="btn-close-activity" style="background:none;border:none;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </div>
+      <div id="activity-list" style="overflow-y:auto;flex:1;font-size:13px"></div>
+    </div>
+  </div>
 </body>
 </html>

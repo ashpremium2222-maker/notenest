@@ -34,6 +34,7 @@ let state = {
   activeNoteId: null,
   searchQuery:  '',
   activeTag:    'all',
+  activeSection: 'all',
   sortBy:       'modified',
   viewMode:     'grid',
   sidebarOpen:  true,
@@ -42,6 +43,73 @@ let state = {
   session:      null,
   loading:      true,
 };
+
+// ============================================================
+// INDEXEDDB OFFLINE CACHE
+// ============================================================
+const idb = {
+  db: null,
+  init: () => new Promise((resolve, reject) => {
+    const req = indexedDB.open('notenest_db', 1);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('notes')) db.createObjectStore('notes', { keyPath: 'id' });
+      if (!db.objectStoreNames.contains('queue')) db.createObjectStore('queue', { keyPath: 'id', autoIncrement: true });
+    };
+    req.onsuccess = (e) => { idb.db = e.target.result; resolve(); };
+    req.onerror = () => reject(req.error);
+  }),
+  saveNotes: (notes) => new Promise((resolve) => {
+    if (!idb.db) return resolve();
+    const tx = idb.db.transaction('notes', 'readwrite');
+    notes.forEach(n => tx.objectStore('notes').put(n));
+    tx.oncomplete = () => resolve();
+  }),
+  getNotes: () => new Promise((resolve) => {
+    if (!idb.db) return resolve([]);
+    const tx = idb.db.transaction('notes', 'readonly');
+    const req = tx.objectStore('notes').getAll();
+    req.onsuccess = () => resolve(req.result);
+  }),
+  queueEdit: (action, payload) => new Promise((resolve) => {
+    if (!idb.db) return resolve();
+    const tx = idb.db.transaction('queue', 'readwrite');
+    tx.objectStore('queue').put({ action, payload, timestamp: Date.now() });
+    tx.oncomplete = () => resolve();
+  }),
+  getQueue: () => new Promise((resolve) => {
+    if (!idb.db) return resolve([]);
+    const tx = idb.db.transaction('queue', 'readonly');
+    const req = tx.objectStore('queue').getAll();
+    req.onsuccess = () => resolve(req.result);
+  }),
+  clearQueue: () => new Promise((resolve) => {
+    if (!idb.db) return resolve();
+    const tx = idb.db.transaction('queue', 'readwrite');
+    tx.objectStore('queue').clear();
+    tx.oncomplete = () => resolve();
+  })
+};
+
+// Start idb
+idb.init().catch(e => console.warn('IDB init failed', e));
+
+async function syncOfflineQueue() {
+  if (!navigator.onLine) return;
+  const queue = await idb.getQueue();
+  if (!queue.length) return;
+  console.log('Syncing offline queue...', queue.length);
+  for (const item of queue) {
+    if (item.action === 'UPDATE_NOTE') {
+      const { id, fields } = item.payload;
+      await supabaseClient.from('notes').update(fields).eq('id', id);
+    }
+  }
+  await idb.clearQueue();
+  toast('Offline edits synced', 'success');
+}
+
+window.addEventListener('online', syncOfflineQueue);
 
 // ============================================================
 // UTILS
@@ -74,6 +142,14 @@ function stripHtml(html) {
 
 function countWords(text) {
   return text.trim().split(/\s+/).filter(Boolean).length;
+}
+
+function autoTitle(note) {
+  const text = stripHtml(note.content).trim();
+  if (!text) return '';
+  const firstLine = text.split('\n')[0].trim();
+  if (firstLine.length > 50) return firstLine.slice(0, 50) + '...';
+  return firstLine;
 }
 
 function getTagHue(tag) {
@@ -184,6 +260,13 @@ function closeMobileSidebar() {
 
 async function loadNotes() {
   if (!state.user) return;
+  
+  if (!navigator.onLine) {
+    state.notes = await idb.getNotes();
+    toast('Offline mode: Using cached notes', 'info');
+    return;
+  }
+
   const { data, error } = await supabaseClient
     .from('notes')
     .select('*')
@@ -191,53 +274,47 @@ async function loadNotes() {
 
   if (error) {
     console.error('Failed to load notes:', error);
-    toast('Failed to load notes', 'error');
+    state.notes = await idb.getNotes();
+    toast('Loaded cached notes', 'info');
     return;
   }
 
   // Map Supabase fields to our app format
   state.notes = (data || []).map(n => ({
-    id:         n.id,
-    title:      n.title || '',
-    content:    n.content || '',
-    tags:       n.tags || [],
-    color:      n.color || 'default',
-    pinned:     n.pinned || false,
-    createdAt:  n.created_at,
-    modifiedAt: n.modified_at,
+    id:           n.id,
+    title:        n.title || '',
+    content:      n.content || '',
+    tags:         n.tags || [],
+    color:        n.color || 'default',
+    pinned:       n.pinned || false,
+    favorited:    n.favorited || false,
+    archived:     n.archived || false,
+    lastOpenedAt: n.last_opened_at || n.modified_at || n.created_at,
+    createdAt:    n.created_at,
+    modifiedAt:   n.modified_at,
+    isDraft:      false
   }));
+  
+  // Cache to IDB
+  idb.saveNotes(state.notes);
 }
 
 async function createNote() {
   if (!state.user) return null;
   const note = {
-    id:         genId(),
-    title:      '',
-    content:    '',
-    tags:       [],
-    color:      'default',
-    pinned:     false,
-    createdAt:  now(),
-    modifiedAt: now(),
+    id:           genId(),
+    title:        '',
+    content:      '',
+    tags:         [],
+    color:        'default',
+    pinned:       false,
+    favorited:    false,
+    archived:     false,
+    createdAt:    now(),
+    modifiedAt:   now(),
+    lastOpenedAt: now(),
+    isDraft:      true
   };
-
-  const { error } = await supabaseClient.from('notes').insert({
-    id:          note.id,
-    user_id:     state.user.id,
-    title:       note.title,
-    content:     note.content,
-    tags:        note.tags,
-    color:       note.color,
-    pinned:      note.pinned,
-    created_at:  note.createdAt,
-    modified_at: note.modifiedAt,
-  });
-
-  if (error) {
-    console.error('Failed to create note:', error);
-    toast('Failed to create note', 'error');
-    return null;
-  }
 
   state.notes.unshift(note);
   return note;
@@ -273,6 +350,12 @@ async function updateNote(id, fields) {
   if ('pinned' in fields) supabaseFields.pinned = fields.pinned;
   supabaseFields.modified_at = now();
 
+  if (!navigator.onLine) {
+    await idb.queueEdit('UPDATE_NOTE', { id, fields: supabaseFields });
+    toast('Saved offline', 'info');
+    return;
+  }
+
   const { error } = await supabaseClient.from('notes').update(supabaseFields).eq('id', id);
 
   if (error) {
@@ -287,6 +370,20 @@ function getActive() {
 
 function filteredSorted() {
   let notes = [...state.notes];
+  
+  if (state.activeSection === 'all') {
+    notes = notes.filter(n => !n.archived);
+  } else if (state.activeSection === 'favorites') {
+    notes = notes.filter(n => n.favorited && !n.archived);
+  } else if (state.activeSection === 'archived') {
+    notes = notes.filter(n => n.archived);
+  } else if (state.activeSection === 'recent') {
+    notes = notes.filter(n => !n.archived);
+    notes.sort((a, b) => new Date(b.lastOpenedAt) - new Date(a.lastOpenedAt));
+  } else if (state.activeSection === 'shared') {
+    notes = notes.filter(n => n.isShared);
+  }
+
   if (state.activeTag !== 'all') notes = notes.filter(n => n.tags.includes(state.activeTag));
   if (state.searchQuery) {
     const q = state.searchQuery.toLowerCase();
@@ -296,13 +393,37 @@ function filteredSorted() {
       n.tags.some(t => t.toLowerCase().includes(q))
     );
   }
-  notes.sort((a, b) => {
-    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-    if (state.sortBy === 'title')   return a.title.localeCompare(b.title);
-    if (state.sortBy === 'created') return new Date(b.createdAt) - new Date(a.createdAt);
-    return new Date(b.modifiedAt) - new Date(a.modifiedAt);
-  });
+  
+  if (state.activeSection !== 'recent') {
+    notes.sort((a, b) => {
+      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+      if (state.sortBy === 'title')   return a.title.localeCompare(b.title);
+      if (state.sortBy === 'created') return new Date(b.createdAt) - new Date(a.createdAt);
+      return new Date(b.modifiedAt) - new Date(a.modifiedAt);
+    });
+  }
   return notes;
+}
+
+async function toggleFavorite(id) {
+  const note = state.notes.find(n => n.id === id);
+  if (!note) return;
+  const p = !note.favorited;
+  note.favorited = p;
+  await supabaseClient.from('notes').update({ favorited: p }).eq('id', id);
+  renderList();
+  if (state.activeNoteId === id) updateFavoriteBtn(p);
+}
+
+async function toggleArchive(id) {
+  const note = state.notes.find(n => n.id === id);
+  if (!note) return;
+  const p = !note.archived;
+  note.archived = p;
+  await supabaseClient.from('notes').update({ archived: p }).eq('id', id);
+  if (p && state.activeNoteId === id) closeEditor();
+  renderList();
+  if (!p && state.activeNoteId === id) updateArchiveBtn(p);
 }
 
 function allTagsMap() {
@@ -369,6 +490,8 @@ const dom = {
   editorMeta:       $('editor-meta'),
   autoSave:         $('auto-save-indicator'),
   btnPin:           $('btn-pin'),
+  btnFavorite:      $('btn-favorite'),
+  btnArchive:       $('btn-archive'),
   btnDelete:        $('btn-delete'),
   btnCloseEditor:   $('btn-close-editor'),
   toastContainer:   $('toast-container'),
@@ -488,6 +611,18 @@ function renderList() {
       title.textContent = 'No notes found';
       sub.textContent   = 'Try a different search or tag filter.';
       cta.style.display = 'none';
+    } else if (state.activeSection === 'favorites') {
+      title.textContent = 'No favorites yet';
+      sub.textContent   = 'Star notes to keep them here.';
+      cta.style.display = 'none';
+    } else if (state.activeSection === 'archived') {
+      title.textContent = 'No archived notes';
+      sub.textContent   = 'Archived notes will appear here.';
+      cta.style.display = 'none';
+    } else if (state.activeSection === 'shared') {
+      title.textContent = 'No shared notes';
+      sub.textContent   = 'Notes you share with others will appear here.';
+      cta.style.display = 'none';
     } else {
       title.textContent = 'No notes yet';
       sub.innerHTML     = 'Click <strong>New Note</strong> to get started';
@@ -513,18 +648,25 @@ function makeCard(note) {
   if (note.id === state.activeNoteId) card.classList.add('selected');
   if (note.pinned) card.classList.add('pinned');
 
-  const title   = note.title || 'Untitled';
+  const title   = note.title || autoTitle(note) || 'New note';
   const preview = stripHtml(note.content).trim() || 'No content';
+   const chk = note.checklist && note.checklist.items ? note.checklist.items : [];
+   const totalChk = chk.length;
+   const compChk = chk.filter(x=>x.completed).length;
+   const chkStr = totalChk > 0 ? `<div class="card-checklist-progress" style="font-size:11px;margin-top:4px;color:var(--primary-color)">${compChk}/${totalChk} </div>` : '';
+  
   const q       = state.searchQuery;
 
   card.innerHTML = `
     <div class="note-card-header">
       <div class="note-card-title">${highlight(title, q)}</div>
+      ${note.favorited ? '<div class="note-card-favorite" title="Favorited"><svg width="12" height="12" viewBox="0 0 24 24" fill="#f59e0b" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></div>' : ''}
+      ${note.archived ? '<div class="note-card-archive" title="Archived"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg></div>' : ''}
       <div class="note-card-pin" title="Pinned">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="m12 17-1-9 9 1-2 3 3 3-3 3-3-3-3 2z"/></svg>
       </div>
     </div>
-    <div class="note-card-preview">${highlight(preview.slice(0,150), q)}</div>
+    <div class="note-card-preview">${highlight(preview.slice(0,150), q)}${chkStr}</div>
     <div class="note-card-footer">
       <span class="note-card-date">${relativeTime(note.modifiedAt)}</span>
       <div class="note-card-tags">
@@ -590,7 +732,16 @@ function abbr(n) {
 function updatePanelTitle() {
   if (state.searchQuery)        dom.panelTitle.textContent = `"${state.searchQuery}"`;
   else if (state.activeTag !== 'all') dom.panelTitle.textContent = `#${state.activeTag}`;
-  else                          dom.panelTitle.textContent = 'All Notes';
+  else {
+    const titles = {
+      'all': 'All Notes',
+      'favorites': 'Favorites',
+      'archived': 'Archive',
+      'recent': 'Recent',
+      'shared': 'Shared'
+    };
+    dom.panelTitle.textContent = titles[state.activeSection] || 'All Notes';
+  }
 }
 
 // ============================================================
@@ -601,6 +752,11 @@ function openNote(id) {
   state.activeNoteId = id;
   const note = getActive();
   if (!note) return;
+  
+  if (!note.isDraft) {
+    note.lastOpenedAt = now();
+    supabaseClient.from('notes').update({ last_opened_at: note.lastOpenedAt }).eq('id', id);
+  }
 
   dom.editorWelcome.style.display = 'none';
   dom.editorContent.removeAttribute('hidden');
@@ -615,6 +771,8 @@ function openNote(id) {
 
   dom.richEditor.innerHTML = note.content;
   updatePinBtn(note.pinned);
+  updateFavoriteBtn(note.favorited);
+  updateArchiveBtn(note.archived);
   updateWordCount();
   updateMeta(note);
 
@@ -624,6 +782,15 @@ function openNote(id) {
 }
 
 function closeEditor() {
+  const note = getActive();
+  if (note && note.isDraft) {
+    const text = stripHtml(note.content).trim();
+    if (!note.title && !text) {
+      state.notes = state.notes.filter(n => n.id !== note.id);
+      renderList();
+    }
+  }
+
   state.activeNoteId = null;
   dom.editorWelcome.style.display = '';
   dom.editorContent.setAttribute('hidden', '');
@@ -634,6 +801,21 @@ function closeEditor() {
 function updatePinBtn(pinned) {
   dom.btnPin.classList.toggle('pinned', pinned);
   dom.btnPin.title = pinned ? 'Unpin note' : 'Pin note';
+}
+
+function updateFavoriteBtn(favorited) {
+  if (!dom.btnFavorite) return;
+  dom.btnFavorite.classList.toggle('favorited', favorited);
+  dom.btnFavorite.title = favorited ? 'Remove from favorites' : 'Add to favorites';
+  dom.btnFavorite.innerHTML = favorited 
+    ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="#f59e0b" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>'
+    : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>';
+}
+
+function updateArchiveBtn(archived) {
+  if (!dom.btnArchive) return;
+  dom.btnArchive.classList.toggle('archived', archived);
+  dom.btnArchive.title = archived ? 'Unarchive note' : 'Archive note';
 }
 
 function updateMeta(note) {
@@ -694,10 +876,42 @@ let hideTimer = null;
 function scheduleSave() {
   showSaving();
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
+  saveTimer = setTimeout(async () => {
     const note = getActive();
     if (!note) return;
-    updateNote(note.id, { title: dom.noteTitleInput.value, content: dom.richEditor.innerHTML });
+    
+    note.title = dom.noteTitleInput.value;
+    note.content = dom.richEditor.innerHTML;
+    const text = stripHtml(note.content).trim();
+    
+    if (note.isDraft) {
+      if (note.title || text) {
+        // First save for draft
+        note.isDraft = false;
+        const { error } = await supabaseClient.from('notes').insert({
+          id:          note.id,
+          user_id:     state.user.id,
+          title:       note.title,
+          content:     note.content,
+          tags:        note.tags,
+          color:       note.color,
+          pinned:      note.pinned,
+          favorited:   note.favorited,
+          archived:    note.archived,
+          created_at:  note.createdAt,
+          modified_at: note.modifiedAt,
+          last_opened_at: note.lastOpenedAt
+        });
+        if (error) console.error('Error inserting draft:', error);
+      } else {
+        // Still empty, don't insert
+        showSaved();
+        return;
+      }
+    } else {
+      updateNote(note.id, { title: note.title, content: note.content });
+    }
+    
     renderList();
     updateMeta(note);
     showSaved();
@@ -824,7 +1038,7 @@ function bindEvents() {
     try {
       await signUp(username, password);
       // Auth listener will handle the rest
-      toast('Account created! Welcome to NoteNest 🎉', 'success');
+      toast('Account created! Welcome to NoteNest ��', 'success');
     } catch (err) {
       dom.signupError.textContent = err.message || 'Could not create account.';
       dom.signupError.removeAttribute('hidden');
@@ -874,6 +1088,17 @@ function bindEvents() {
     renderList();
     updatePanelTitle();
   });
+
+  // Section navigation
+  const sectionBtns = document.querySelectorAll('.section-nav-btn');
+  if (sectionBtns.length > 0) {
+    sectionBtns.forEach(b => b.addEventListener('click', () => {
+      state.activeSection = b.getAttribute('data-section');
+      sectionBtns.forEach(x => x.classList.toggle('active', x === b));
+      renderList();
+      updatePanelTitle();
+    }));
+  }
 
   // Tag: All
   dom.tagFilterList.querySelector('[data-tag="all"]')?.addEventListener('click', () => {
@@ -1017,6 +1242,20 @@ function bindEvents() {
     renderList();
     toast(p ? 'Note pinned' : 'Note unpinned', 'success');
   });
+
+  // Favorite
+  if (dom.btnFavorite) {
+    dom.btnFavorite.addEventListener('click', () => {
+      if (state.activeNoteId) toggleFavorite(state.activeNoteId);
+    });
+  }
+
+  // Archive
+  if (dom.btnArchive) {
+    dom.btnArchive.addEventListener('click', () => {
+      if (state.activeNoteId) toggleArchive(state.activeNoteId);
+    });
+  }
 
   // Delete
   dom.btnDelete.addEventListener('click', () => { if (state.activeNoteId) openDeleteModal(state.activeNoteId); });
@@ -1204,6 +1443,110 @@ function ensureCriticalElements() {
   dom.authToggleText = dom.authToggleText || $('auth-toggle-text');
 }
 
+// ============================================================
+// REALTIME & PRESENCE (Phase 4)
+// ============================================================
+let realtimeChannel = null;
+let presenceChannel = null;
+let typingTimeout = null;
+
+function subscribeToRealtime() {
+  if (!supabaseClient) return;
+  if (realtimeChannel) supabaseClient.removeChannel(realtimeChannel);
+  
+  realtimeChannel = supabaseClient.channel('public:notenest_changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'notes' }, payload => {
+      if (payload.eventType === 'UPDATE') {
+        const id = payload.new.id;
+        const existing = state.notes.find(n => n.id === id);
+        if (existing) {
+          const remoteTime = new Date(payload.new.modified_at).getTime();
+          const localTime = new Date(existing.modifiedAt).getTime();
+          if (remoteTime >= localTime) {
+            existing.title = payload.new.title || '';
+            existing.content = payload.new.content || '';
+            existing.tags = payload.new.tags || [];
+            existing.color = payload.new.color || 'default';
+            existing.pinned = payload.new.pinned || false;
+            existing.favorited = payload.new.favorited || false;
+            existing.archived = payload.new.archived || false;
+            if (payload.new.checklist) existing.checklist = payload.new.checklist;
+            existing.modifiedAt = payload.new.modified_at;
+            
+            if (state.activeNoteId === id) {
+              const activeEl = document.activeElement;
+              const titleEl = document.getElementById('note-title-input');
+              const contentEl = document.getElementById('rich-editor');
+              if (activeEl !== titleEl) titleEl.value = existing.title;
+              if (activeEl !== contentEl) contentEl.innerHTML = existing.content;
+              if (typeof renderChecklist === 'function') renderChecklist();
+            }
+            if (typeof renderList === 'function') renderList();
+            idb.saveNotes(state.notes);
+          }
+        }
+      }
+    }).subscribe();
+}
+
+function updatePresence(noteId) {
+  if (!supabaseClient || !state.user || !noteId) return;
+  if (presenceChannel) supabaseClient.removeChannel(presenceChannel);
+  
+  presenceChannel = supabaseClient.channel('presence:' + noteId, {
+    config: { presence: { key: state.user.id } }
+  });
+  
+  presenceChannel.on('presence', { event: 'sync' }, () => {
+    const stateObj = presenceChannel.presenceState();
+    const collabs = [];
+    let isTyping = false;
+    let typist = '';
+    
+    for (const id in stateObj) {
+      if (id !== state.user.id) {
+        const pres = stateObj[id][0];
+        collabs.push(pres);
+        if (pres.typing) { isTyping = true; typist = pres.email; }
+      }
+    }
+    
+    const cRow = document.getElementById('collaborators-row');
+    if (cRow) {
+      if (collabs.length > 0) {
+        cRow.removeAttribute('hidden');
+        cRow.innerHTML = collabs.map(c => 
+          `<div style="width:24px;height:24px;border-radius:12px;background:var(--primary-color);color:white;display:flex;align-items:center;justify-content:center;font-size:12px;position:relative;" title="${c.email}">
+            ${(c.email || 'U')[0].toUpperCase()}
+            <div style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#10b981;border-radius:4px;border:1px solid white;"></div>
+          </div>`
+        ).join('') + (isTyping ? `<span style="font-size:12px;color:var(--text-secondary);align-self:center;margin-left:8px">${typist} is editing...</span>` : '');
+      } else {
+        cRow.setAttribute('hidden', '');
+      }
+    }
+  }).subscribe(async (status) => {
+    if (status === 'SUBSCRIBED') {
+      await presenceChannel.track({ user_id: state.user.id, email: getUserDisplayName(), typing: false });
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const ed = document.getElementById('rich-editor');
+  if (ed) {
+    ed.addEventListener('input', () => {
+      if (presenceChannel) {
+        presenceChannel.track({ user_id: state.user.id, email: getUserDisplayName(), typing: true });
+        clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(() => {
+          presenceChannel.track({ user_id: state.user.id, email: getUserDisplayName(), typing: false });
+        }, 1500);
+      }
+    });
+  }
+});
+
 // Emergency timeout: if loading takes >10s, show auth page
 const LOADING_TIMEOUT_MS = 10000;
 
@@ -1250,6 +1593,7 @@ async function init() {
       state.user = session.user;
       state.session = session;
       await loadNotes();
+      subscribeToRealtime();
       state.loading = false;
       showAppScreen();
       showUI();
@@ -1264,6 +1608,7 @@ async function init() {
         state.user = session.user;
         state.session = session;
         await loadNotes();
+        subscribeToRealtime();
         showAppScreen();
         showUI();
       } else if (event === 'SIGNED_OUT') {
@@ -1311,3 +1656,433 @@ if (document.readyState === 'loading') {
 } else {
   init();
 }
+
+
+// ============================================================
+// PHASE 2 & 3: COLLABORATION, NOTIFICATIONS, CHECKLISTS
+// ============================================================
+
+// State extensions
+state.notifications = [];
+state.collaborators = [];
+state.myPermission = 'edit';
+state.isShared = false;
+
+// Helpers
+async function loadSharedNotes() {
+  if (!state.user) return [];
+  const { data, error } = await supabaseClient.from('note_collaborators')
+    .select('note_id, permission, owner_id')
+    .eq('collaborator_email', state.user.email)
+    .eq('status', 'accepted');
+  if (error || !data) return [];
+  
+  const sharedIds = data.map(d => d.note_id);
+  if (sharedIds.length === 0) return [];
+  
+  const { data: sharedNotes } = await supabaseClient.from('notes')
+    .select('*')
+    .in('id', sharedIds);
+    
+  return (sharedNotes || []).map(n => {
+    const collab = data.find(d => d.note_id === n.id);
+    return {
+      id: n.id,
+      title: n.title || '',
+      content: n.content || '',
+      tags: n.tags || [],
+      color: n.color || 'default',
+      pinned: n.pinned || false,
+      favorited: n.favorited || false,
+      archived: n.archived || false,
+      lastOpenedAt: n.last_opened_at || n.modified_at || n.created_at,
+      createdAt: n.created_at,
+      modifiedAt: n.modified_at,
+      isDraft: false,
+      isShared: true,
+      permission: collab.permission,
+      ownerId: collab.owner_id,
+      checklist: n.checklist || { items: [] }
+    };
+  });
+}
+
+const origLoadNotes = loadNotes;
+loadNotes = async function() {
+  await origLoadNotes();
+  const shared = await loadSharedNotes();
+  
+  // Merge notes
+  for (const sn of shared) {
+    if (!state.notes.find(n => n.id === sn.id)) {
+      state.notes.push(sn);
+    }
+  }
+  
+  // Update local checklists parse if missing
+  state.notes.forEach(n => {
+    if (!n.checklist) n.checklist = { items: [] };
+  });
+  
+  await loadNotifications();
+};
+
+async function logActivity(noteId, action, details) {
+  if (!state.user) return;
+  const email = state.user.email;
+  await supabaseClient.from('note_activity').insert({
+    note_id: noteId,
+    user_id: state.user.id,
+    user_email: email,
+    action,
+    details
+  });
+}
+
+// Notifications
+async function loadNotifications() {
+  if (!state.user) return;
+  const { data } = await supabaseClient.from('notifications')
+    .select('*')
+    .eq('user_id', state.user.id)
+    .order('created_at', { ascending: false });
+  state.notifications = data || [];
+  renderNotifications();
+}
+
+async function markNotificationRead(id) {
+  await supabaseClient.from('notifications').update({ read: true }).eq('id', id);
+  const n = state.notifications.find(x => x.id === id);
+  if (n) n.read = true;
+  renderNotifications();
+}
+
+async function markAllRead() {
+  await supabaseClient.from('notifications').update({ read: true }).eq('user_id', state.user.id);
+  state.notifications.forEach(n => n.read = true);
+  renderNotifications();
+}
+
+function renderNotifications() {
+  const unreadCount = state.notifications.filter(n => !n.read).length;
+  const badge = document.getElementById('notif-badge');
+  if (unreadCount > 0) {
+    badge.textContent = unreadCount;
+    badge.removeAttribute('hidden');
+  } else {
+    badge.setAttribute('hidden', '');
+  }
+  
+  const list = document.getElementById('notif-list');
+  if (!list) return;
+  list.innerHTML = state.notifications.length === 0 ? '<p>No notifications</p>' : state.notifications.map(n => {
+    return `<div style="padding:10px;border-bottom:1px solid #eee;background:${n.read ? 'transparent' : '#f0f4ff'}">
+      <div style="font-weight:bold">${esc(n.title)}</div>
+      <div style="font-size:12px">${esc(n.message)}</div>
+      ${n.type === 'invite' && !n.read ? `<div style="margin-top:5px;display:flex;gap:5px">
+          <button onclick="acceptInvite('${n.id}', '${n.data.collab_id}')" style="background:var(--primary-color);color:white;border:none;padding:2px 5px;border-radius:3px;cursor:pointer">Accept</button>
+          <button onclick="declineInvite('${n.id}', '${n.data.collab_id}')" style="background:#e5e7eb;border:none;padding:2px 5px;border-radius:3px;cursor:pointer">Decline</button>
+        </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+window.acceptInvite = async function(notifId, collabId) {
+  await supabaseClient.from('note_collaborators').update({ status: 'accepted', accepted_at: now() }).eq('id', collabId);
+  await markNotificationRead(notifId);
+  await loadNotes();
+  renderList();
+  toast('Invitation accepted', 'success');
+};
+
+window.declineInvite = async function(notifId, collabId) {
+  await supabaseClient.from('note_collaborators').update({ status: 'declined' }).eq('id', collabId);
+  await markNotificationRead(notifId);
+  toast('Invitation declined', 'info');
+};
+
+document.getElementById('btn-notif-mark-read')?.addEventListener('click', markAllRead);
+document.getElementById('btn-notifications')?.addEventListener('click', () => {
+  const dd = document.getElementById('notif-dropdown');
+  if (dd.hasAttribute('hidden')) dd.removeAttribute('hidden');
+  else dd.setAttribute('hidden', '');
+});
+
+// Collaborators
+async function loadCollaborators(noteId) {
+  const { data } = await supabaseClient.from('note_collaborators')
+    .select('*')
+    .eq('note_id', noteId);
+  state.collaborators = data || [];
+  renderCollaborators();
+}
+
+function renderCollaborators() {
+  const list = document.getElementById('collaborators-list');
+  if (!list) return;
+  list.innerHTML = state.collaborators.map(c => `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee">
+      <div>
+        <div>${esc(c.collaborator_email)}</div>
+        <div style="font-size:12px;color:gray">Status: ${c.status}</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <select onchange="changeCollabPerm('${c.id}', this.value)" ${c.owner_id !== state.user.id ? 'disabled' : ''}>
+          <option value="view" ${c.permission === 'view' ? 'selected' : ''}>View</option>
+          <option value="edit" ${c.permission === 'edit' ? 'selected' : ''}>Edit</option>
+        </select>
+        ${c.owner_id === state.user.id ? `<button onclick="removeCollab('${c.id}')" style="background:red;color:white;border:none;padding:2px 5px;border-radius:3px;cursor:pointer">Remove</button>` : ''}
+      </div>
+    </div>`).join('');
+  
+  const row = document.getElementById('collaborators-row');
+  if (state.collaborators.length > 0) {
+    row.removeAttribute('hidden');
+    row.innerHTML = state.collaborators.filter(c => c.status === 'accepted').map(c => `<div title="${esc(c.collaborator_email)} (${c.permission})" style="width:24px;height:24px;border-radius:50%;background:#e5e7eb;display:flex;align-items:center;justify-content:center;font-size:12px">
+        ${esc(c.collaborator_email[0].toUpperCase())}
+      </div>`).join('');
+  } else {
+    row.setAttribute('hidden', '');
+  }
+}
+
+window.changeCollabPerm = async function(id, perm) {
+  await supabaseClient.from('note_collaborators').update({ permission: perm }).eq('id', id);
+  loadCollaborators(state.activeNoteId);
+};
+window.removeCollab = async function(id) {
+  await supabaseClient.from('note_collaborators').delete().eq('id', id);
+  loadCollaborators(state.activeNoteId);
+  checkCollabStatus(state.activeNoteId);
+};
+
+async function checkCollabStatus(noteId) {
+  const { count } = await supabaseClient.from('note_collaborators').select('*', { count: 'exact', head: true }).eq('note_id', noteId);
+  const isCollab = count > 0;
+  await supabaseClient.from('notes').update({ is_collaborative: isCollab }).eq('id', noteId);
+}
+
+document.getElementById('btn-invite')?.addEventListener('click', () => {
+  document.getElementById('invite-modal').removeAttribute('hidden');
+  loadCollaborators(state.activeNoteId);
+});
+
+document.getElementById('btn-close-invite')?.addEventListener('click', () => {
+  document.getElementById('invite-modal').setAttribute('hidden', '');
+});
+
+document.getElementById('btn-send-invite')?.addEventListener('click', async () => {
+  const email = document.getElementById('invite-email').value.trim();
+  const perm = document.getElementById('invite-perm').value;
+  if (!email) return;
+  
+  const noteId = state.activeNoteId;
+  const ownerId = state.user.id;
+  
+  const { data: collabData } = await supabaseClient.from('note_collaborators').insert({
+    note_id: noteId,
+    owner_id: ownerId,
+    collaborator_email: email,
+    permission: perm,
+    status: 'pending',
+    invited_at: now()
+  }).select();
+  
+  await checkCollabStatus(noteId);
+  
+  if (collabData && collabData.length > 0) {
+    const collab = collabData[0];
+    
+    // Create a generic notification
+    const { data: users } = await supabaseClient.from('note_activity').select('user_id').eq('user_email', email).limit(1);
+    if (users && users.length > 0) {
+      await supabaseClient.from('notifications').insert({
+        user_id: users[0].user_id,
+        type: 'invite',
+        title: 'New Note Invitation',
+        message: `${state.user.email} invited you to a note`,
+        data: { collab_id: collab.id },
+        read: false
+      });
+    }
+  }
+  
+  await logActivity(noteId, 'invite', `Invited ${email} to ${perm}`);
+  document.getElementById('invite-email').value = '';
+  loadCollaborators(noteId);
+  toast('Invite sent', 'success');
+});
+
+// Activity
+document.getElementById('btn-view-activity')?.addEventListener('click', async () => {
+  const { data } = await supabaseClient.from('note_activity')
+    .select('*')
+    .eq('note_id', state.activeNoteId)
+    .order('created_at', { ascending: false });
+    
+  const list = document.getElementById('activity-list');
+  list.innerHTML = (data || []).map(a => `<div style="padding:8px 0;border-bottom:1px solid #eee">
+      <div><strong>${esc(a.user_email)}</strong> ${esc(a.action)}</div>
+      <div style="color:gray">${esc(a.details)}</div>
+      <div style="font-size:11px;color:#aaa">${new Date(a.created_at).toLocaleString()}</div>
+    </div>`).join('');
+  
+  document.getElementById('activity-modal').removeAttribute('hidden');
+});
+
+document.getElementById('btn-close-activity')?.addEventListener('click', () => {
+  document.getElementById('activity-modal').setAttribute('hidden', '');
+});
+
+// Checklists
+document.getElementById('btn-checklist')?.addEventListener('click', () => {
+  const area = document.getElementById('checklist-area');
+  if (area.hasAttribute('hidden')) {
+    area.removeAttribute('hidden');
+  } else {
+    area.setAttribute('hidden', '');
+  }
+});
+
+function renderChecklist() {
+  const note = getActive();
+  if (!note || !note.checklist) return;
+  const items = note.checklist.items || [];
+  
+  items.sort((a, b) => {
+    if (a.completed === b.completed) return (a.order || 0) - (b.order || 0);
+    return a.completed ? 1 : -1;
+  });
+  
+  const total = items.length;
+  const completed = items.filter(x => x.completed).length;
+  
+  document.getElementById('checklist-progress-text').textContent = `${completed}/${total} completed`;
+  document.getElementById('checklist-progress-bar').style.width = total ? `${(completed/total)*100}%` : '0%';
+  
+  const list = document.getElementById('checklist-items');
+  list.innerHTML = items.map(item => `<div style="display:flex;align-items:center;gap:8px;padding:4px 0; ${item.completed ? 'opacity:0.6;text-decoration:line-through' : ''}">
+      <input type="checkbox" ${item.completed ? 'checked' : ''} onchange="toggleChecklistItem('${item.id}')" ${state.myPermission === 'view' ? 'disabled' : ''} />
+      <span style="flex:1">${esc(item.text)}</span>
+      ${item.completed ? `<span style="font-size:10px;color:gray">by ${esc(item.completedBy)}</span>` : ''}
+      ${state.myPermission === 'edit' ? `<button onclick="deleteChecklistItem('${item.id}')" style="background:none;border:none;cursor:pointer;color:red">&times;</button>` : ''}
+    </div>`).join('');
+  
+  const card = document.querySelector(`.note-card[data-id="${note.id}"]`);
+  if (card) {
+    let cp = card.querySelector('.card-checklist-progress');
+    if (total > 0) {
+      if (!cp) {
+        cp = document.createElement('div');
+        cp.className = 'card-checklist-progress';
+        cp.style.fontSize = '11px';
+        cp.style.marginTop = '4px';
+        cp.style.color = 'var(--primary-color)';
+        card.querySelector('.note-card-preview').appendChild(cp);
+      }
+      cp.textContent = `${completed}/${total} `;
+    } else if (cp) {
+      cp.remove();
+    }
+  }
+}
+
+document.getElementById('new-checklist-item')?.addEventListener('keydown', async (e) => {
+  if (e.key === 'Enter') {
+    if (state.myPermission === 'view') return;
+    const text = e.target.value.trim();
+    if (!text) return;
+    
+    const note = getActive();
+    if (!note) return;
+    if (!note.checklist) note.checklist = { items: [] };
+    
+    const item = {
+      id: 'chk_' + genId(),
+      text,
+      completed: false,
+      completedBy: null,
+      completedAt: null,
+      assignedTo: null,
+      order: note.checklist.items.length
+    };
+    
+    note.checklist.items.push(item);
+    e.target.value = '';
+    renderChecklist();
+    await updateNote(note.id, { checklist: note.checklist });
+  }
+});
+
+window.toggleChecklistItem = async function(itemId) {
+  if (state.myPermission === 'view') return;
+  const note = getActive();
+  const item = note.checklist.items.find(x => x.id === itemId);
+  if (item) {
+    item.completed = !item.completed;
+    item.completedBy = item.completed ? state.user.email : null;
+    item.completedAt = item.completed ? now() : null;
+    renderChecklist();
+    await updateNote(note.id, { checklist: note.checklist });
+    if (note.isShared) await logActivity(note.id, 'checklist', `${item.completed ? 'Completed' : 'Unchecked'} "${item.text}"`);
+  }
+};
+
+window.deleteChecklistItem = async function(itemId) {
+  if (state.myPermission === 'view') return;
+  const note = getActive();
+  note.checklist.items = note.checklist.items.filter(x => x.id !== itemId);
+  renderChecklist();
+  await updateNote(note.id, { checklist: note.checklist });
+};
+
+// Override openNote to handle permissions
+const origOpenNote = openNote;
+openNote = function(id) {
+  origOpenNote(id);
+  updatePresence(id);
+  const note = getActive();
+  if (note) {
+    state.myPermission = note.permission || 'edit';
+    const isView = state.myPermission === 'view';
+    
+    document.getElementById('note-title-input').disabled = isView;
+    document.getElementById('rich-editor').setAttribute('contenteditable', isView ? 'false' : 'true');
+    const toolbar = document.querySelector('.editor-toolbar');
+    if (toolbar) {
+      if (isView) {
+        toolbar.classList.add('view-only');
+        document.querySelectorAll('.toolbar-left .toolbar-btn').forEach(btn => btn.style.display = 'none');
+      } else {
+        toolbar.classList.remove('view-only');
+        document.querySelectorAll('.toolbar-left .toolbar-btn').forEach(btn => btn.style.display = '');
+      }
+    }
+    
+    document.getElementById('tags-input').disabled = isView;
+    document.getElementById('new-checklist-item').disabled = isView;
+    
+    if (note.checklist && note.checklist.items.length > 0) {
+      document.getElementById('checklist-area').removeAttribute('hidden');
+    } else {
+      document.getElementById('checklist-area').setAttribute('hidden', '');
+    }
+    
+    renderChecklist();
+    if (note.isShared || note.is_collaborative) loadCollaborators(note.id);
+  }
+};
+
+// Override updateNote to prevent edit if view
+const origUpdateNote = updateNote;
+updateNote = async function(id, fields) {
+  const note = state.notes.find(n => n.id === id);
+  if (note && note.permission === 'view') return; // Cannot edit
+  
+  if ('checklist' in fields) {
+    const supabaseFields = { checklist: fields.checklist, modified_at: now() };
+    await supabaseClient.from('notes').update(supabaseFields).eq('id', id);
+    Object.assign(note, fields, { modifiedAt: now() });
+  } else {
+    await origUpdateNote(id, fields);
+  }
+};

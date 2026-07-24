@@ -2,6 +2,7 @@ const CACHE_NAME = 'notenest-v1';
 const ASSETS = [
   './',
   './index.html',
+  './style.css',
   './app.js',
   './logo.jpg',
   './icon-192.png',
