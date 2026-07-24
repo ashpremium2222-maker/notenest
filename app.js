@@ -171,6 +171,14 @@ function getUserDisplayName() {
 }
 
 // ============================================================
+// MOBILE SIDEBAR
+// ============================================================
+
+function closeMobileSidebar() {
+  dom.appShell.classList.remove('mobile-sidebar-open');
+}
+
+// ============================================================
 // SUPABASE NOTES CRUD
 // ============================================================
 
@@ -384,8 +392,10 @@ function showAppScreen() {
   dom.authPage.setAttribute('hidden', '');
   dom.appShell.removeAttribute('hidden');
   dom.loadingScreen.setAttribute('hidden', '');
-  // Update sidebar username
+  // Update sidebar usernames
   dom.sidebarUsername.textContent = getUserDisplayName();
+  const mobileUser = document.getElementById('mobile-sidebar-username');
+  if (mobileUser) mobileUser.textContent = getUserDisplayName();
 }
 
 function showLoading() {
@@ -435,9 +445,23 @@ function setBtnLoading(btn, loading) {
 function applyTheme(t) {
   state.theme = t;
   dom.htmlEl.setAttribute('data-theme', t);
-  if (dom.themeLabel) {
-    dom.themeLabel.textContent = t === 'dark' ? 'Light Mode' : 'Dark Mode';
+  if (dom.themeLabel) dom.themeLabel.textContent = t === 'dark' ? 'Light Mode' : 'Dark Mode';
+  // Update mobile sidebar theme label
+  const mobileLabel = document.getElementById('mobile-theme-label');
+  if (mobileLabel) mobileLabel.textContent = t === 'dark' ? 'Light Mode' : 'Dark Mode';
+  // Update theme-color meta for mobile browser chrome
+  const metaTheme = document.querySelector('meta[name="theme-color"]');
+  if (metaTheme) metaTheme.setAttribute('content', t === 'dark' ? '#080810' : '#e8edf8');
+  // Update status bar style for iOS
+  const metaStatusBar = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+  if (metaStatusBar) metaStatusBar.setAttribute('content', t === 'dark' ? 'black-translucent' : 'default');
+}
+
+function getSystemTheme() {
+  if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    return 'dark';
   }
+  return 'light';
 }
 
 function toggleTheme() {
@@ -913,6 +937,36 @@ function bindEvents() {
     });
   }
 
+  // Mobile sidebar theme toggle
+  const mobileThemeToggle = document.getElementById('mobile-theme-toggle');
+  if (mobileThemeToggle) {
+    mobileThemeToggle.addEventListener('click', () => {
+      toggleTheme();
+      closeMobileSidebar();
+    });
+  }
+
+  // Mobile sidebar logout
+  const mobileLogoutBtn = document.getElementById('mobile-logout-btn');
+  if (mobileLogoutBtn) {
+    mobileLogoutBtn.addEventListener('click', async () => {
+      closeMobileSidebar();
+      try {
+        await signOut();
+        toast('Signed out', 'info');
+      } catch (err) {
+        toast('Failed to sign out', 'error');
+      }
+    });
+  }
+
+  // Close mobile sidebar on Escape
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && dom.appShell.classList.contains('mobile-sidebar-open')) {
+      closeMobileSidebar();
+    }
+  });
+
   // Theme toggle
   dom.themeToggle.addEventListener('click', toggleTheme);
 
@@ -1170,6 +1224,12 @@ async function init() {
 
     // Load settings from localStorage
     loadSettings();
+
+    // If user hasn't set a theme preference, use system preference
+    const storedSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+    if (!storedSettings.theme) {
+      state.theme = getSystemTheme();
+    }
 
     // Bind events (they'll work once logged in)
     bindEvents();
