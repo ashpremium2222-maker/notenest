@@ -785,8 +785,10 @@ function openNote(id) {
 function closeEditor() {
   const note = getActive();
   if (note && note.isDraft) {
-    const text = stripHtml(note.content).trim();
-    if (!note.title && !text) {
+    // Sync latest input values before checking emptiness
+    const title = dom.noteTitleInput.value;
+    const content = dom.richEditor.innerHTML;
+    if (!noteHasData(title, content)) {
       state.notes = state.notes.filter(n => n.id !== note.id);
       renderList();
     }
@@ -868,6 +870,17 @@ function removeTag(tag) {
 }
 
 // ============================================================
+// HELPER: check if a note has meaningful content
+// ============================================================
+
+function noteHasData(title, contentHtml) {
+  if (title && title.trim()) return true;
+  const text = stripHtml(contentHtml).trim();
+  if (text) return true;
+  return false;
+}
+
+// ============================================================
 // AUTO-SAVE
 // ============================================================
 
@@ -881,35 +894,38 @@ function scheduleSave() {
     const note = getActive();
     if (!note) return;
     
-    note.title = dom.noteTitleInput.value;
-    note.content = dom.richEditor.innerHTML;
-    const text = stripHtml(note.content).trim();
+    const rawTitle = dom.noteTitleInput.value;
+    const rawContent = dom.richEditor.innerHTML;
+    
+    // Don't save if both title and content are empty
+    if (!noteHasData(rawTitle, rawContent)) {
+      dom.autoSave.classList.add('hidden');
+      return;
+    }
+    
+    note.title = rawTitle;
+    note.content = rawContent;
     
     if (note.isDraft) {
-      if (note.title || text) {
-        // First save for draft
-        note.isDraft = false;
-        const { error } = await supabaseClient.from('notes').insert({
-          id:          note.id,
-          user_id:     state.user.id,
-          title:       note.title,
-          content:     note.content,
-          tags:        note.tags,
-          color:       note.color,
-          pinned:      note.pinned,
-          favorited:   note.favorited,
-          archived:    note.archived,
-          created_at:  note.createdAt,
-          modified_at: note.modifiedAt,
-          last_opened_at: note.lastOpenedAt
-        });
-        if (error) console.error('Error inserting draft:', error);
-      } else {
-        // Still empty, don't insert
-        showSaved();
-        return;
-      }
+      // First save for draft — insert to Supabase
+      note.isDraft = false;
+      const { error } = await supabaseClient.from('notes').insert({
+        id:          note.id,
+        user_id:     state.user.id,
+        title:       note.title,
+        content:     note.content,
+        tags:        note.tags,
+        color:       note.color,
+        pinned:      note.pinned,
+        favorited:   note.favorited,
+        archived:    note.archived,
+        created_at:  note.createdAt,
+        modified_at: note.modifiedAt,
+        last_opened_at: note.lastOpenedAt
+      });
+      if (error) console.error('Error inserting draft:', error);
     } else {
+      // Existing note — update
       updateNote(note.id, { title: note.title, content: note.content });
     }
     
@@ -1307,9 +1323,20 @@ function bindEvents() {
       clearTimeout(saveTimer);
       const note = getActive();
       if (note) {
-        updateNote(note.id, { title: dom.noteTitleInput.value, content: dom.richEditor.innerHTML });
-        showSaved();
-        toast('Saved', 'success');
+        const title = dom.noteTitleInput.value;
+        const content = dom.richEditor.innerHTML;
+        if (!noteHasData(title, content)) {
+          toast('Nothing to save — note is empty', 'info');
+          return;
+        }
+        if (note.isDraft) {
+          // Trigger scheduleSave which handles draft insertion properly
+          scheduleSave();
+        } else {
+          updateNote(note.id, { title, content });
+          showSaved();
+          toast('Saved', 'success');
+        }
       }
     }
 
