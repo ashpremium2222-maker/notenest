@@ -30,9 +30,23 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
+  
+  // Network-first strategy: always try to fetch latest from network first
   event.respondWith(
-    caches.match(event.request).then(cached => {
-      return cached || fetch(event.request).catch(() => caches.match('./index.html'));
-    })
+    fetch(event.request)
+      .then(response => {
+        // If successful, dynamically update the cache with the fresh file
+        const responseToCache = response.clone();
+        caches.open(CACHE_NAME).then(cache => {
+          cache.put(event.request, responseToCache);
+        });
+        return response;
+      })
+      .catch(() => {
+        // If network fails (offline), fallback to the cached version
+        return caches.match(event.request).then(cached => {
+          return cached || caches.match('./index.html');
+        });
+      })
   );
 });
