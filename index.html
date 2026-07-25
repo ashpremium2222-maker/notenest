@@ -328,7 +328,7 @@
 
 <div class="modal-overlay" id="delete-modal" hidden>
   <div class="modal">
-    <button class="icon-btn modal-close-btn" id="btn-close-delete" title="Close" style="position:absolute;top:12px;right:12px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    <button class="btn-modal-close" id="btn-close-delete" title="Close" onclick="this.closest('.modal-overlay').setAttribute('hidden', '')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     <div class="modal-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg></div>
     <h2 class="modal-title">Delete Note?</h2>
     <p class="modal-body">This note will be permanently deleted.</p>
@@ -342,30 +342,30 @@
 <script src="app.js"></script>
 <div class="modal-overlay" id="invite-modal" hidden>
     <div class="modal">
-      <div style="display:flex;justify-content:space-between;margin-bottom:16px;width:100%;">
-        <h2 style="margin:0;font-size:18px">Share Note</h2>
-        <button class="icon-btn modal-close-btn" id="btn-close-invite" title="Close"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      <div style="display:flex;justify-content:space-between;margin-bottom:16px;width:100%;align-items:center;">
+        <h2 style="margin:0;font-size:20px;font-family:'Outfit',sans-serif;font-weight:700;">Share Note</h2>
+        <button class="btn-modal-close" id="btn-close-invite" title="Close" onclick="this.closest('.modal-overlay').setAttribute('hidden', '')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       </div>
-      <div style="display:flex;gap:8px;margin-bottom:16px">
-        <input type="email" id="invite-email" placeholder="Email address" style="flex:1;padding:8px;border:1px solid var(--border-color);border-radius:4px" />
-        <select id="invite-perm" style="padding:8px;border:1px solid var(--border-color);border-radius:4px">
+      <div style="display:flex;gap:8px;margin-bottom:16px;width:100%;">
+        <input type="email" id="invite-email" class="auth-input" placeholder="Email address" style="flex:1;" />
+        <select id="invite-perm" class="auth-input" style="width:auto;padding-right:32px;">
           <option value="view">View</option>
           <option value="edit">Edit</option>
         </select>
-        <button id="btn-send-invite" style="padding:8px 16px;background:var(--primary-color);color:white;border:none;border-radius:4px;cursor:pointer">Invite</button>
+        <button id="btn-send-invite" class="auth-btn" style="margin-top:0;">Invite</button>
       </div>
       <div id="collaborators-list"></div>
       <div style="margin-top:16px;text-align:center">
-        <button id="btn-view-activity" style="font-size:13px;color:var(--primary-color);background:none;border:none;cursor:pointer">View Activity History</button>
+        <button id="btn-view-activity" style="font-size:13px;color:var(--blue);background:none;border:none;cursor:pointer;font-weight:600;font-family:'Inter',sans-serif;">View Activity History</button>
       </div>
     </div>
   </div>
 
   <div class="modal-overlay" id="activity-modal" hidden>
     <div class="modal">
-      <div style="display:flex;justify-content:space-between;margin-bottom:16px;width:100%;">
-        <h2 style="margin:0;font-size:18px">Activity History</h2>
-        <button class="icon-btn modal-close-btn" id="btn-close-activity" title="Close"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      <div style="display:flex;justify-content:space-between;margin-bottom:16px;width:100%;align-items:center;">
+        <h2 style="margin:0;font-size:20px;font-family:'Outfit',sans-serif;font-weight:700;">Activity History</h2>
+        <button class="btn-modal-close" id="btn-close-activity" title="Close" onclick="this.closest('.modal-overlay').setAttribute('hidden', '')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       </div>
       <div id="activity-list" style="overflow-y:auto;flex:1;font-size:13px"></div>
     </div>
