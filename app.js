@@ -2123,3 +2123,391 @@ updateNote = async function(id, fields) {
     await origUpdateNote(id, fields);
   }
 };
+
+// ============================================================
+// PHASE 5: SWIPE GESTURES ON NOTE CARDS
+// ============================================================
+
+function attachSwipeGestures(card, noteId) {
+  let startX = 0;
+  let startY = 0;
+  let currentX = 0;
+  let swiping = false;
+  const SWIPE_THRESHOLD = 80;
+
+  card.addEventListener('touchstart', (e) => {
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    currentX = 0;
+    swiping = true;
+    card.style.transition = 'none';
+  }, { passive: true });
+
+  card.addEventListener('touchmove', (e) => {
+    if (!swiping) return;
+    const deltaX = e.touches[0].clientX - startX;
+    const deltaY = e.touches[0].clientY - startY;
+
+    // Only capture horizontal swipes
+    if (Math.abs(deltaX) < Math.abs(deltaY) && Math.abs(deltaX) < 10) return;
+
+    currentX = deltaX;
+    const clampedX = Math.max(-140, Math.min(140, deltaX));
+    card.style.transform = `translateX(${clampedX}px)`;
+
+    // Show visual hint overlays
+    let pinHint = card.querySelector('.swipe-hint-pin');
+    let delHint = card.querySelector('.swipe-hint-del');
+
+    if (clampedX > 20) {
+      if (!pinHint) {
+        pinHint = document.createElement('div');
+        pinHint.className = 'swipe-hint-pin';
+        pinHint.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="m12 17-1-9 9 1-2 3 3 3-3 3-3-3-3 2z"/><path d="m8 21 4-4"/></svg><span>Pin</span>`;
+        card.appendChild(pinHint);
+      }
+      pinHint.style.opacity = Math.min(1, (clampedX - 20) / 60).toString();
+      if (delHint) delHint.style.opacity = '0';
+    } else if (clampedX < -20) {
+      if (!delHint) {
+        delHint = document.createElement('div');
+        delHint.className = 'swipe-hint-del';
+        delHint.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg><span>Delete</span>`;
+        card.appendChild(delHint);
+      }
+      delHint.style.opacity = Math.min(1, (Math.abs(clampedX) - 20) / 60).toString();
+      if (pinHint) pinHint.style.opacity = '0';
+    } else {
+      if (pinHint) pinHint.style.opacity = '0';
+      if (delHint) delHint.style.opacity = '0';
+    }
+  }, { passive: true });
+
+  card.addEventListener('touchend', () => {
+    if (!swiping) return;
+    swiping = false;
+
+    card.style.transition = 'transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)';
+    card.style.transform = 'translateX(0)';
+
+    // Clean up hints
+    setTimeout(() => {
+      card.querySelectorAll('.swipe-hint-pin, .swipe-hint-del').forEach(el => el.remove());
+    }, 350);
+
+    if (currentX > SWIPE_THRESHOLD) {
+      // Swipe right → toggle pin
+      const note = state.notes.find(n => n.id === noteId);
+      if (note) {
+        const p = !note.pinned;
+        note.pinned = p;
+        updateNote(note.id, { pinned: p });
+        renderList();
+
+        // Brief flash pin icon
+        const flash = document.createElement('div');
+        flash.className = 'swipe-action-flash pin-flash';
+        flash.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="m12 17-1-9 9 1-2 3 3 3-3 3-3-3-3 2z"/></svg>`;
+        document.body.appendChild(flash);
+        setTimeout(() => flash.remove(), 700);
+
+        toast(p ? 'Note pinned' : 'Note unpinned', 'success');
+      }
+    } else if (currentX < -SWIPE_THRESHOLD) {
+      // Swipe left → open delete modal
+      openDeleteModal(noteId);
+    }
+  });
+}
+
+// ============================================================
+// PHASE 6: LONG-PRESS CONTEXT MENU
+// ============================================================
+
+let contextMenu = null;
+let longPressTimer = null;
+
+function dismissContextMenu() {
+  if (contextMenu) {
+    contextMenu.classList.add('ctx-fade-out');
+    setTimeout(() => {
+      contextMenu && contextMenu.remove();
+      contextMenu = null;
+    }, 180);
+  }
+}
+
+function showContextMenu(noteId, x, y) {
+  dismissContextMenu();
+
+  const note = state.notes.find(n => n.id === noteId);
+  if (!note) return;
+
+  const menu = document.createElement('div');
+  menu.className = 'ctx-menu';
+  menu.setAttribute('role', 'menu');
+
+  const items = [
+    { icon: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`, label: 'Edit', action: () => { openNote(noteId); dismissContextMenu(); } },
+    { icon: `<svg width="15" height="15" viewBox="0 0 24 24" fill="${note.pinned ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><path d="m12 17-1-9 9 1-2 3 3 3-3 3-3-3-3 2z"/><path d="m8 21 4-4"/></svg>`, label: note.pinned ? 'Unpin' : 'Pin', action: async () => { const p = !note.pinned; note.pinned = p; await updateNote(note.id, { pinned: p }); renderList(); toast(p ? 'Pinned' : 'Unpinned', 'success'); dismissContextMenu(); } },
+    { icon: `<svg width="15" height="15" viewBox="0 0 24 24" fill="${note.favorited ? '#f59e0b' : 'none'}" stroke="${note.favorited ? '#f59e0b' : 'currentColor'}" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`, label: note.favorited ? 'Unfavorite' : 'Favorite', action: async () => { await toggleFavorite(noteId); dismissContextMenu(); } },
+    { icon: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`, label: 'Duplicate', action: async () => { await duplicateNote(noteId); dismissContextMenu(); } },
+    { icon: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>`, label: 'Delete', danger: true, action: () => { openDeleteModal(noteId); dismissContextMenu(); } },
+  ];
+
+  menu.innerHTML = items.map((item, i) => `
+    <button class="ctx-item${item.danger ? ' ctx-danger' : ''}" data-index="${i}" role="menuitem">
+      <span class="ctx-icon">${item.icon}</span>
+      <span>${item.label}</span>
+    </button>
+  `).join('');
+
+  // Position
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const menuW = 200;
+  const menuH = items.length * 46 + 16;
+  const left = Math.min(x, vw - menuW - 8);
+  const top = Math.min(y, vh - menuH - 8);
+
+  menu.style.left = `${left}px`;
+  menu.style.top = `${top}px`;
+
+  document.body.appendChild(menu);
+  contextMenu = menu;
+
+  // Wire actions
+  menu.querySelectorAll('.ctx-item').forEach((btn, i) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      items[i].action();
+    });
+  });
+
+  // Dismiss on outside click
+  setTimeout(() => {
+    document.addEventListener('click', dismissContextMenu, { once: true });
+    document.addEventListener('touchstart', dismissContextMenu, { once: true });
+  }, 10);
+}
+
+function attachLongPress(card, noteId) {
+  let touchStartX = 0;
+  let touchStartY = 0;
+
+  const startLongPress = (clientX, clientY) => {
+    touchStartX = clientX;
+    touchStartY = clientY;
+    card.classList.add('long-press-active');
+    longPressTimer = setTimeout(() => {
+      card.classList.remove('long-press-active');
+      // Vibrate if supported
+      if (navigator.vibrate) navigator.vibrate(30);
+      showContextMenu(noteId, clientX, clientY);
+    }, 500);
+  };
+
+  const cancelLongPress = () => {
+    clearTimeout(longPressTimer);
+    card.classList.remove('long-press-active');
+  };
+
+  card.addEventListener('touchstart', (e) => {
+    startLongPress(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: true });
+
+  card.addEventListener('touchmove', (e) => {
+    const dx = e.touches[0].clientX - touchStartX;
+    const dy = e.touches[0].clientY - touchStartY;
+    if (Math.abs(dx) > 10 || Math.abs(dy) > 10) cancelLongPress();
+  }, { passive: true });
+
+  card.addEventListener('touchend', cancelLongPress);
+  card.addEventListener('touchcancel', cancelLongPress);
+
+  // Desktop right-click
+  card.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    showContextMenu(noteId, e.clientX, e.clientY);
+  });
+}
+
+// duplicateNote — creates a copy of the note
+async function duplicateNote(id) {
+  if (!state.user) return;
+  const original = state.notes.find(n => n.id === id);
+  if (!original) return;
+
+  const copy = {
+    id:           genId(),
+    title:        (original.title ? original.title + ' (copy)' : 'Copy'),
+    content:      original.content,
+    tags:         [...original.tags],
+    color:        original.color,
+    pinned:       false,
+    favorited:    false,
+    archived:     false,
+    createdAt:    now(),
+    modifiedAt:   now(),
+    lastOpenedAt: now(),
+    isDraft:      false,
+  };
+
+  const { error } = await supabaseClient.from('notes').insert({
+    id:           copy.id,
+    user_id:      state.user.id,
+    title:        copy.title,
+    content:      copy.content,
+    tags:         copy.tags,
+    color:        copy.color,
+    pinned:       copy.pinned,
+    favorited:    copy.favorited,
+    archived:     copy.archived,
+    created_at:   copy.createdAt,
+    modified_at:  copy.modifiedAt,
+    last_opened_at: copy.lastOpenedAt,
+  });
+
+  if (error) {
+    toast('Failed to duplicate note', 'error');
+    console.error('Duplicate error:', error);
+    return;
+  }
+
+  state.notes.unshift(copy);
+  renderSidebar();
+  renderList();
+  toast('Note duplicated', 'success');
+}
+
+// Patch makeCard to attach swipe and long-press after creation
+const _origMakeCard = makeCard;
+makeCard = function(note) {
+  const card = _origMakeCard(note);
+  attachSwipeGestures(card, note.id);
+  attachLongPress(card, note.id);
+  return card;
+};
+
+// ============================================================
+// PHASE 7: SKELETON LOADERS & EMPTY STATES
+// ============================================================
+
+function showSkeletonLoaders(count = 5) {
+  const c = dom.notesContainer;
+  // Remove existing skeletons
+  c.querySelectorAll('.skeleton-card').forEach(s => s.remove());
+  dom.emptyState.style.display = 'none';
+
+  for (let i = 0; i < count; i++) {
+    const sk = document.createElement('div');
+    sk.className = 'skeleton-card';
+    sk.innerHTML = `
+      <div class="sk-title"></div>
+      <div class="sk-line"></div>
+      <div class="sk-line sk-line-short"></div>
+      <div class="sk-footer">
+        <div class="sk-badge"></div>
+        <div class="sk-badge sk-badge-sm"></div>
+      </div>
+    `;
+    c.appendChild(sk);
+  }
+}
+
+function hideSkeletonLoaders() {
+  dom.notesContainer.querySelectorAll('.skeleton-card').forEach(s => s.remove());
+}
+
+// Patch renderList to handle skeleton state
+const _origRenderList = renderList;
+renderList = function() {
+  if (state.loading) {
+    showSkeletonLoaders();
+    return;
+  }
+  hideSkeletonLoaders();
+  _origRenderList();
+};
+
+// Improved empty state messages (patch inside renderList-like logic)
+// Already handled in the original renderList — we extend with better copy below.
+// Override the empty state copy for the base "No notes" case to match Phase 7 spec.
+const _origRenderListFull = renderList;
+renderList = function() {
+  _origRenderListFull();
+  // After render, update empty state copy if visible
+  if (dom.emptyState.style.display !== 'none') {
+    const title = dom.emptyState.querySelector('.empty-title');
+    const sub   = dom.emptyState.querySelector('.empty-sub');
+    const cta   = dom.emptyState.querySelector('.btn-empty-cta');
+    if (!title) return;
+
+    if (state.searchQuery) {
+      title.textContent = 'No results found';
+      sub.innerHTML = `No notes match <strong>"${esc(state.searchQuery)}"</strong>. Try a different keyword.`;
+      if (cta) cta.style.display = 'none';
+    } else if (state.activeTag !== 'all') {
+      title.textContent = 'No notes found';
+      sub.textContent = 'Try a different tag filter.';
+      if (cta) cta.style.display = 'none';
+    } else if (state.activeSection === 'all') {
+      title.textContent = 'No notes yet';
+      sub.innerHTML = 'Tap <strong>+</strong> to create your first note.';
+      if (cta) cta.style.display = 'inline-flex';
+    }
+  }
+};
+
+// ============================================================
+// PHASE 7: SETTINGS PANEL — nav wiring + user info
+// ============================================================
+
+(function wireSettingsPanel() {
+  const navSettings = document.getElementById('nav-settings');
+  const settingsPanel = document.getElementById('settings-panel');
+  if (!navSettings || !settingsPanel) return;
+
+  // Wire bottom nav settings button to open settings panel
+  navSettings.onclick = null;
+  navSettings.addEventListener('click', () => {
+    populateSettingsProfile();
+    settingsPanel.removeAttribute('hidden');
+  });
+
+  // Close button already uses inline onclick — augment it
+  const closeBtn = document.getElementById('btn-close-settings');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      settingsPanel.setAttribute('hidden', '');
+    });
+  }
+
+  // Swipe down to close settings panel on mobile
+  let spStartY = 0;
+  settingsPanel.addEventListener('touchstart', (e) => {
+    spStartY = e.touches[0].clientY;
+  }, { passive: true });
+  settingsPanel.addEventListener('touchmove', (e) => {
+    if (e.touches[0].clientY - spStartY > 100 && settingsPanel.scrollTop === 0) {
+      settingsPanel.setAttribute('hidden', '');
+    }
+  }, { passive: true });
+})();
+
+function populateSettingsProfile() {
+  const settingsPanel = document.getElementById('settings-panel');
+  if (!settingsPanel || !state.user) return;
+
+  const nameEl = settingsPanel.querySelector('h3');
+  const emailEl = settingsPanel.querySelector('p');
+  if (nameEl) nameEl.textContent = getUserDisplayName();
+  if (emailEl) emailEl.textContent = state.user.email || '';
+}
+
+// Repopulate when user logs in
+const _origShowAppScreen = showAppScreen;
+showAppScreen = function() {
+  _origShowAppScreen();
+  populateSettingsProfile();
+};
