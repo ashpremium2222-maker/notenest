@@ -517,7 +517,7 @@ function showAppScreen() {
   dom.appShell.removeAttribute('hidden');
   dom.loadingScreen.setAttribute('hidden', '');
   // Update sidebar usernames
-  dom.sidebarUsername.textContent = getUserDisplayName();
+  if (dom.sidebarUsername) dom.sidebarUsername.textContent = getUserDisplayName();
   const mobileUser = document.getElementById('mobile-sidebar-username');
   if (mobileUser) mobileUser.textContent = getUserDisplayName();
 }
@@ -715,9 +715,9 @@ function renderSidebar() {
   });
 
   if (allBtn) allBtn.classList.toggle('active', state.activeTag === 'all');
-  dom.statTags.textContent  = Object.keys(tags).length;
-  dom.statWords.textContent = abbr(totalWords());
-  dom.statNotes.textContent = state.notes.length;
+  if (dom.statTags) dom.statTags.textContent  = Object.keys(tags).length;
+  if (dom.statWords) dom.statWords.textContent = abbr(totalWords());
+  if (dom.statNotes) dom.statNotes.textContent = state.notes.length;
 }
 
 function refreshTagActive() {
